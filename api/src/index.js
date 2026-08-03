@@ -7,6 +7,11 @@ import encounterRoutes from './routes/encounters.js';
 import claimRoutes from './routes/claims.js';
 import eligibilityRoutes from './routes/eligibility.js';
 import remittanceRoutes from './routes/remittances.js';
+import prescriptionRoutes from './routes/prescriptions.js';
+import analyticsRoutes from './routes/analytics.js';
+import reminderRoutes from './routes/reminders.js';
+import { pool } from './db.js';
+import { sendSms } from './adapters/sms.js';
 import { requireAuth } from './middleware/auth.js';
 
 const app = express();
@@ -22,6 +27,29 @@ app.use('/encounters', requireAuth, encounterRoutes);
 app.use('/claims', requireAuth, claimRoutes);
 app.use('/eligibility', requireAuth, eligibilityRoutes);
 app.use('/remittances', requireAuth, remittanceRoutes);
+app.use('/prescriptions', requireAuth, prescriptionRoutes);
+app.use('/analytics', requireAuth, analyticsRoutes);
+app.use('/reminders', requireAuth, reminderRoutes);
+
+// Reminder worker: sends due SMS reminders every 60s.
+// PRODUCTION: move to a dedicated worker pod on a queue.
+setInterval(async () => {
+  try {
+    const { rows } = await pool.query('SELECT * FROM fetch_due_reminders(50)');
+    for (const rem of rows) {
+      if (!rem.phone || !rem.sms_consent) {
+        await pool.query('SELECT mark_reminder($1, $2, $3)', [rem.id, 'skipped_no_consent', null]);
+        continue;
+      }
+      try {
+        const sms = await sendSms({ to: rem.phone, body: rem.message });
+        await pool.query('SELECT mark_reminder($1, $2, $3)', [rem.id, 'sent', sms.sid]);
+      } catch (e) {
+        await pool.query('SELECT mark_reminder($1, $2, $3)', [rem.id, 'failed', e.message]);
+      }
+    }
+  } catch (e) { console.error('[reminder-worker]', e.message); }
+}, 60000);
 
 // central error handler — never leak internals
 app.use((err, _req, res, _next) => {

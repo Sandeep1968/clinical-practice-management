@@ -7,6 +7,10 @@ import Appointments from './pages/Appointments.jsx';
 import ClaimTracker from './pages/ClaimTracker.jsx';
 import Notes from './pages/Notes.jsx';
 import Remittances from './pages/Remittances.jsx';
+import Queue from './pages/Queue.jsx';
+import Prescriptions from './pages/Prescriptions.jsx';
+import Analytics from './pages/Analytics.jsx';
+import Settings from './pages/Settings.jsx';
 import { setToken } from './api.js';
 
 export default function App() {
@@ -30,12 +34,16 @@ export default function App() {
   return (
     <div className="layout">
       <aside>
-        <h1>CPM</h1>
+        <h1>ClinicOS</h1>
         <nav>
           <NavLink to="/" end>Dashboard</NavLink>
-          <NavLink to="/clients">Clients</NavLink>
+          <NavLink to="/queue">Queue</NavLink>
+          <NavLink to="/clients">Patients</NavLink>
           <NavLink to="/appointments">Schedule</NavLink>
           {user.role === 'clinician' && <NavLink to="/notes">Notes</NavLink>}
+          {user.role === 'clinician' && <NavLink to="/prescriptions">Prescriptions</NavLink>}
+          {['owner', 'admin', 'biller'].includes(user.role) && <NavLink to="/analytics">Analytics</NavLink>}
+          <NavLink to="/settings">Settings</NavLink>
           {['owner', 'biller'].includes(user.role) && <NavLink to="/claims">Claim Tracker</NavLink>}
           {['owner', 'biller'].includes(user.role) && <NavLink to="/remittances">Remittances</NavLink>}
         </nav>
@@ -53,6 +61,10 @@ export default function App() {
           <Route path="/notes" element={<Notes />} />
           <Route path="/claims" element={<ClaimTracker user={user} />} />
           <Route path="/remittances" element={<Remittances />} />
+          <Route path="/queue" element={<Queue />} />
+          <Route path="/prescriptions" element={<Prescriptions />} />
+          <Route path="/analytics" element={<Analytics />} />
+          <Route path="/settings" element={<Settings user={user} />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>

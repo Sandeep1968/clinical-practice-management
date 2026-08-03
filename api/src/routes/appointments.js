@@ -37,6 +37,21 @@ r.post('/', async (req, res, next) => {
         `INSERT INTO appointments (tenant_id, client_id, clinician_id, starts_at, ends_at, appt_type, location)
          VALUES (current_tenant(), $1, $2, $3, $4, $5, $6) RETURNING *`,
         [clientId, clinicianId, startsAt, endsAt, apptType || 'session', location || 'office']);
+
+      // schedule SMS reminder 24h before (TCPA: only with consent + phone)
+      const cli = await db.query(`SELECT first_name, phone, sms_consent FROM clients WHERE id = $1`, [clientId]);
+      const c = cli.rows[0];
+      const sendAt = new Date(new Date(startsAt).getTime() - 24 * 3600 * 1000);
+      if (sendAt > new Date()) {
+        const when = new Date(startsAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+        await db.query(
+          `INSERT INTO reminders (tenant_id, appointment_id, client_id, message, send_at, status)
+           VALUES (current_tenant(), $1, $2, $3, $4, $5)`,
+          [rows[0].id, clientId,
+           `Hi ${c?.first_name || ''}, reminder: you have an appointment on ${when}. Reply STOP to opt out.`,
+           sendAt.toISOString(),
+           (c?.phone && c?.sms_consent) ? 'scheduled' : 'skipped_no_consent']);
+      }
       await audit(db, req.ctx, 'CREATE', 'appointments', rows[0].id);
       return rows[0];
     });

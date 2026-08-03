@@ -25,13 +25,13 @@ r.get('/', async (req, res, next) => {
 
 r.post('/', requireRole('owner', 'admin', 'front_desk'), async (req, res, next) => {
   try {
-    const { firstName, lastName, dob, email, phone, clinicianId } = req.body || {};
+    const { firstName, lastName, dob, email, phone, smsConsent, clinicianId } = req.body || {};
     if (!firstName || !lastName) return res.status(400).json({ error: 'firstName and lastName required' });
     const created = await withTenant(req.ctx, async (db) => {
       const { rows } = await db.query(
-        `INSERT INTO clients (tenant_id, first_name, last_name, dob, email, phone)
-         VALUES (current_tenant(), $1, $2, $3, $4, $5) RETURNING *`,
-        [firstName, lastName, dob || null, email || null, phone || null]);
+        `INSERT INTO clients (tenant_id, first_name, last_name, dob, email, phone, sms_consent)
+         VALUES (current_tenant(), $1, $2, $3, $4, $5, $6) RETURNING *`,
+        [firstName, lastName, dob || null, email || null, phone || null, !!smsConsent]);
       if (clinicianId) {
         await db.query(`INSERT INTO client_assignments (client_id, clinician_id) VALUES ($1, $2)`,
           [rows[0].id, clinicianId]);

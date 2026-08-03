@@ -4,7 +4,7 @@ import { api } from '../api.js';
 export default function Clients({ user }) {
   const [clients, setClients] = useState([]);
   const [q, setQ] = useState('');
-  const [form, setForm] = useState({ firstName: '', lastName: '', email: '' });
+  const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', smsConsent: false });
   const [elig, setElig] = useState({});   // clientId -> result
   const canCreate = ['owner', 'admin', 'front_desk'].includes(user.role);
 
@@ -25,7 +25,7 @@ export default function Clients({ user }) {
   const create = async (e) => {
     e.preventDefault();
     await api('/clients', { method: 'POST', body: form });
-    setForm({ firstName: '', lastName: '', email: '' });
+    setForm({ firstName: '', lastName: '', email: '', phone: '', smsConsent: false });
     load();
   };
 
@@ -44,7 +44,14 @@ export default function Clients({ user }) {
                  onChange={e => setForm({ ...form, lastName: e.target.value })} />
           <input placeholder="Email" type="email" value={form.email}
                  onChange={e => setForm({ ...form, email: e.target.value })} />
-          <button className="primary">Add client</button>
+          <input placeholder="Mobile phone" type="tel" value={form.phone}
+                 onChange={e => setForm({ ...form, phone: e.target.value })} style={{ width: 150 }} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+            <input type="checkbox" checked={form.smsConsent}
+                   onChange={e => setForm({ ...form, smsConsent: e.target.checked })} />
+            Consents to SMS reminders
+          </label>
+          <button className="primary">Add patient</button>
         </form>
       )}
       <div className="card">

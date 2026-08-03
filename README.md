@@ -53,6 +53,11 @@ Demo login (seeded): `owner@demo.practice` / `Demo1234!`
 - [x] Clearinghouse 837P submission adapter (`api/src/adapters/clearinghouse.js` — mock adjudication ~20s; set `CLEARINGHOUSE_API_KEY` for real)
 - [x] AI note drafting (`api/src/adapters/ai_notes.js` — template mock; set `ANTHROPIC_API_KEY` for real, requires vendor BAA)
 - [x] ERA 835 auto-posting (`api/src/adapters/era.js` — mock generates payer payments at 80% with CO-45/PR-2 adjustments; claims auto-move to Funded, patient balances auto-invoiced)
+- [x] Digital prescriptions (eka-style Rx pad: ICD-10 diagnoses, structured meds, printable branded Rx)
+- [x] Patient queue (front-desk day view: waiting / upcoming / seen, check-in flow)
+- [x] Practice analytics (revenue by month, claims funnel, no-show rate)
+- [x] MFA (TOTP, RFC 6238 — enroll in Settings; two-step login once enabled)
+- [x] SMS appointment reminders (24h before; TCPA consent-gated; mock mode logs, set `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_FROM` for real)
 - [ ] Client portal
 
 ## Demo: full revenue cycle in the UI
