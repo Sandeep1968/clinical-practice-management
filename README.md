@@ -49,7 +49,15 @@ Demo login (seeded): `owner@demo.practice` / `Demo1234!`
 - [x] Scheduling (appointments CRUD + status flow)
 - [x] Encounters + notes (sign-to-lock, releases billing)
 - [x] Claims + claim tracker with status history
-- [ ] Pverify eligibility adapter (queue worker seam in `api/src/jobs/`)
-- [ ] Clearinghouse 837P/277/835 adapter
-- [ ] AI note drafting service
+- [x] Pverify eligibility adapter (`api/src/adapters/pverify.js` — mock mode; set `PVERIFY_CLIENT_ID`/`PVERIFY_CLIENT_SECRET` for real)
+- [x] Clearinghouse 837P submission adapter (`api/src/adapters/clearinghouse.js` — mock adjudication ~20s; set `CLEARINGHOUSE_API_KEY` for real)
+- [x] AI note drafting (`api/src/adapters/ai_notes.js` — template mock; set `ANTHROPIC_API_KEY` for real, requires vendor BAA)
+- [ ] ERA 835 auto-posting
 - [ ] Client portal
+
+## Demo: full revenue cycle in the UI
+
+1. Owner login → Clients → **Verify eligibility** (Pverify mock returns copay/deductible).
+2. Owner → Schedule → move the seeded appointment to **completed** (creates an encounter).
+3. Clinician login (`clinician@demo.practice`) → **Notes** → open the encounter → **Generate AI draft** → edit → **Sign & lock** (creates a draft claim).
+4. Biller login (`biller@demo.practice`) → **Claim Tracker** → **Submit (837P)** — claim number assigned; mock payer adjudicates ~20 seconds later and the status moves on its own.

@@ -1,8 +1,39 @@
 import { Router } from 'express';
 import { withTenant, audit } from '../db.js';
 import { requireRole } from '../middleware/auth.js';
+import { draftNote } from '../adapters/ai_notes.js';
 
 const r = Router();
+
+// Generate an AI note draft for an encounter (clinician only, own via RLS)
+r.post('/:id/ai-draft', requireRole('clinician'), async (req, res, next) => {
+  try {
+    const { templateType = 'SOAP', transcript } = req.body || {};
+    const result = await withTenant(req.ctx, async (db) => {
+      const enc = await db.query(
+        `SELECT e.dos, c.first_name || ' ' || c.last_name AS client_name
+         FROM encounters e JOIN clients c ON c.id = e.client_id WHERE e.id = $1`,
+        [req.params.id]);
+      if (!enc.rowCount) return null;
+
+      const draft = await draftNote({
+        templateType, clientName: enc.rows[0].client_name,
+        dos: enc.rows[0].dos, transcript
+      });
+
+      await db.query(
+        `INSERT INTO notes (tenant_id, encounter_id, template_type, ai_draft)
+         VALUES (current_tenant(), $1, $2, $3)
+         ON CONFLICT (encounter_id) DO UPDATE SET ai_draft = EXCLUDED.ai_draft
+         WHERE notes.locked = false`,
+        [req.params.id, templateType, JSON.stringify(draft)]);
+      await audit(db, req.ctx, 'AI_DRAFT', 'encounters', req.params.id);
+      return draft;
+    });
+    if (!result) return res.status(404).json({ error: 'encounter not found or not yours' });
+    res.json(result);
+  } catch (e) { next(e); }
+});
 
 // Work queue: unsigned notes (clinician sees own via RLS; owner sees all)
 r.get('/unsigned', async (req, res, next) => {

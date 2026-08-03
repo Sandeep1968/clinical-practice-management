@@ -25,6 +25,13 @@ export default function ClaimTracker() {
     load();
   };
 
+  const submit = async (id) => {
+    await api(`/claims/${id}/submit`, { method: 'POST' });
+    load();
+    // mock clearinghouse adjudicates ~20s later — refresh to see it move
+    setTimeout(load, 22000);
+  };
+
   const showHistory = async (id) => {
     const r = await api(`/claims/${id}/history`);
     setHistory({ id, events: r?.data || [] });
@@ -59,7 +66,12 @@ export default function ClaimTracker() {
                   : c.expected_payout_date ? `est. ${new Date(c.expected_payout_date).toLocaleDateString()}` : '—'}</td>
                 <td><span className={`badge ${c.status}`}>{c.status.replaceAll('_', ' ')}</span></td>
                 <td>
-                  {(TRANSITIONS[c.status] || []).map(s => (
+                  {['draft', 'in_revision'].includes(c.status) && (
+                    <button className="primary" onClick={() => submit(c.id)} style={{ marginRight: 6, padding: '4px 10px' }}>
+                      Submit (837P)
+                    </button>
+                  )}
+                  {(TRANSITIONS[c.status] || []).filter(s => s !== 'submitted').map(s => (
                     <button key={s} onClick={() => transition(c.id, s)} style={{ marginRight: 6 }}>
                       → {s.replaceAll('_', ' ')}
                     </button>

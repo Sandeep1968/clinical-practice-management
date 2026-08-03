@@ -1,6 +1,8 @@
 import { Router } from 'express';
 import { withTenant, audit } from '../db.js';
 import { requireRole } from '../middleware/auth.js';
+import { submitClaim } from '../adapters/clearinghouse.js';
+import { enqueue } from '../jobs/queue.js';
 
 const r = Router();
 
@@ -75,6 +77,64 @@ r.patch('/:id/status', requireRole('owner', 'biller'), async (req, res, next) =>
     });
     if (updated.code !== 200) return res.status(updated.code).json({ error: updated.msg || 'not found' });
     res.json(updated.claim);
+  } catch (e) { next(e); }
+});
+
+// Submit claim electronically via clearinghouse adapter (837P)
+r.post('/:id/submit', requireRole('owner', 'biller'), async (req, res, next) => {
+  try {
+    const result = await withTenant(req.ctx, async (db) => {
+      const q = await db.query(
+        `SELECT cl.*, c.first_name || ' ' || c.last_name AS client_name,
+                u.full_name AS provider_name, p.npi AS provider_npi, ip.name AS payer_name
+         FROM claims cl
+         JOIN clients c ON c.id = cl.client_id
+         JOIN clinicians p ON p.id = cl.provider_id
+         JOIN users u ON u.id = p.user_id
+         LEFT JOIN insurance_payers ip ON ip.id = cl.payer_id
+         WHERE cl.id = $1 FOR UPDATE OF cl`, [req.params.id]);
+      if (!q.rowCount) return { code: 404 };
+      const claim = q.rows[0];
+      if (!['draft', 'in_revision'].includes(claim.status))
+        return { code: 422, msg: `cannot submit a claim in status '${claim.status}'` };
+
+      const enc = await db.query(`SELECT cpt_codes FROM encounters WHERE id = $1`, [claim.encounter_id]);
+      const sub = await submitClaim({
+        claim: { ...claim, cpt_codes: enc.rows[0]?.cpt_codes || [] },
+        clientName: claim.client_name, providerName: claim.provider_name,
+        providerNpi: claim.provider_npi, payerName: claim.payer_name
+      });
+
+      const { rows } = await db.query(
+        `UPDATE claims SET status = 'submitted', claim_number = $1,
+                expected_payout_date = current_date + 21
+         WHERE id = $2 RETURNING *`, [sub.claimNumber, req.params.id]);
+      await db.query(
+        `INSERT INTO claim_status_history (tenant_id, claim_id, from_status, to_status, source, payload)
+         VALUES (current_tenant(), $1, $2, 'submitted', 'clearinghouse', $3)`,
+        [req.params.id, claim.status, JSON.stringify({ claimNumber: sub.claimNumber })]);
+      await audit(db, req.ctx, 'CLAIM_SUBMIT', 'claims', req.params.id);
+      return { code: 200, claim: rows[0], mock: sub.mockAdjudication };
+    });
+
+    if (result.code !== 200) return res.status(result.code).json({ error: result.msg || 'not found' });
+
+    // Mock payer adjudication: moves the claim ~20s later so the tracker
+    // visibly updates. Real mode: clearinghouse webhook does this instead.
+    if (result.mock) {
+      const ctx = { ...req.ctx };
+      enqueue('mock-adjudication', async () => {
+        await withTenant(ctx, async (db) => {
+          await db.query(`UPDATE claims SET status = $1 WHERE id = $2 AND status = 'submitted'`,
+            [result.mock.toStatus, req.params.id]);
+          await db.query(
+            `INSERT INTO claim_status_history (tenant_id, claim_id, from_status, to_status, source)
+             VALUES (current_tenant(), $1, 'submitted', $2, 'clearinghouse')`,
+            [req.params.id, result.mock.toStatus]);
+        });
+      }, { delayMs: result.mock.delayMs });
+    }
+    res.json(result.claim);
   } catch (e) { next(e); }
 });
 
