@@ -58,6 +58,11 @@ Demo login (seeded): `owner@demo.practice` / `Demo1234!`
 - [x] Practice analytics (revenue by month, claims funnel, no-show rate)
 - [x] MFA (TOTP, RFC 6238 — enroll in Settings; two-step login once enabled)
 - [x] SMS appointment reminders (24h before; TCPA consent-gated; mock mode logs, set `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_FROM` for real)
+- [x] Documents & e-signatures — form/consent template library, send-to-portal for signature, patient e-sign, uploads register, staff countersign, chart Documents tab
+- [x] Communication — secure two-way messaging (staff inbox ↔ patient portal) and patient broadcasts (SMS consent-gated, or portal message) with audience targeting
+- [x] Notifications — in-app bell with unread badge, role-scoped feed, mark-read, deep links
+- [x] Payment plans — installment schedules (weekly/biweekly/monthly) against invoices, per-installment charging, auto-charge flag, patient view in portal; card-on-file table ready for Stripe
+- [x] Customization — practice branding (name, logo, color, Rx header/footer, portal welcome) and clinical template library (note & treatment-plan templates)
 - [x] Treatment plans — versioned goals/objectives with measurable targets, interventions, progress tracking, clinician e-signature (sign-to-lock), revision creating a new version, and patient acknowledgement in the portal
 - [x] Patient portal (`/portal` — email + DOB login, visits, prescriptions, bills, self-booking; DB-level RLS scoping to own records. Demo: jamie@example.com / 1990-04-12)
 - [x] eka-style interface (topbar with global patient search, avatars, tabbed patient chart at /patients/:id, gradient stat chips)

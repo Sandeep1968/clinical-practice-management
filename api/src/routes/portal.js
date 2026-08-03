@@ -100,6 +100,108 @@ r.get('/invoices', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ---------- documents & e-signature ----------
+r.get('/documents', async (req, res, next) => {
+  try {
+    const rows = await withTenant(req.ctx, (db) =>
+      db.query(
+        `SELECT id, kind, title, body, status, requires_signature, signed_by_client_at, created_at
+         FROM documents WHERE client_id = $1 ORDER BY created_at DESC`,
+        [req.ctx.clientId]).then(x => x.rows));
+    res.json({ data: rows });
+  } catch (e) { next(e); }
+});
+
+r.post('/documents/:id/sign', async (req, res, next) => {
+  try {
+    const { name } = req.body || {};
+    if (!name?.trim()) return res.status(400).json({ error: 'type your full name to sign' });
+    const ok = await withTenant(req.ctx, (db) =>
+      db.query(
+        `UPDATE documents SET signed_by_client_at = now(), signed_by_client_name = $1, status = 'signed'
+          WHERE id = $2 AND client_id = $3 AND signed_by_client_at IS NULL RETURNING id`,
+        [name.trim(), req.params.id, req.ctx.clientId]).then(x => x.rowCount));
+    if (!ok) return res.status(409).json({ error: 'already signed' });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+// ---------- secure messaging ----------
+r.get('/messages', async (req, res, next) => {
+  try {
+    const data = await withTenant(req.ctx, async (db) => {
+      const threads = await db.query(
+        `SELECT id, subject, last_message_at FROM message_threads
+         WHERE client_id = $1 ORDER BY last_message_at DESC`, [req.ctx.clientId]);
+      for (const t of threads.rows) {
+        const m = await db.query(
+          `SELECT sender_kind, body, created_at FROM messages WHERE thread_id = $1 ORDER BY created_at`, [t.id]);
+        t.messages = m.rows;
+      }
+      await db.query(
+        `UPDATE messages SET read_by_client_at = now()
+          WHERE sender_kind = 'staff' AND read_by_client_at IS NULL
+            AND thread_id IN (SELECT id FROM message_threads WHERE client_id = $1)`, [req.ctx.clientId]);
+      return threads.rows;
+    });
+    res.json({ data });
+  } catch (e) { next(e); }
+});
+
+r.post('/messages', async (req, res, next) => {
+  try {
+    const { threadId, subject, body } = req.body || {};
+    if (!body?.trim()) return res.status(400).json({ error: 'message required' });
+    await withTenant(req.ctx, async (db) => {
+      let tid = threadId;
+      if (!tid) {
+        const t = await db.query(
+          `INSERT INTO message_threads (tenant_id, client_id, subject)
+           VALUES (current_tenant(), $1, $2) RETURNING id`,
+          [req.ctx.clientId, subject || 'Message from patient']);
+        tid = t.rows[0].id;
+      }
+      await db.query(
+        `INSERT INTO messages (tenant_id, thread_id, sender_kind, body)
+         VALUES (current_tenant(), $1, 'client', $2)`, [tid, body]);
+      await db.query(`UPDATE message_threads SET last_message_at = now() WHERE id = $1`, [tid]);
+      await db.query(
+        `INSERT INTO notifications (tenant_id, role_scope, kind, title, body, link)
+         VALUES (current_tenant(), 'clinician', 'message', 'New patient message', $1, '/messages')`,
+        [body.slice(0, 120)]);
+    });
+    res.status(201).json({ ok: true });
+  } catch (e) { next(e); }
+});
+
+// ---------- payment plans (patient view) ----------
+r.get('/payment-plans', async (req, res, next) => {
+  try {
+    const data = await withTenant(req.ctx, async (db) => {
+      const plans = await db.query(
+        `SELECT id, total_amount, installments, cadence, status FROM payment_plans
+         WHERE client_id = $1 AND status = 'active'`, [req.ctx.clientId]);
+      for (const p of plans.rows) {
+        const items = await db.query(
+          `SELECT id, seq, due_date, amount, paid_at, status FROM payment_plan_items
+           WHERE plan_id = $1 ORDER BY seq`, [p.id]);
+        p.items = items.rows;
+      }
+      return plans.rows;
+    });
+    res.json({ data });
+  } catch (e) { next(e); }
+});
+
+r.get('/branding', async (req, res, next) => {
+  try {
+    const row = await withTenant(req.ctx, (db) =>
+      db.query(`SELECT display_name, logo_url, primary_color, portal_welcome FROM branding
+                 WHERE tenant_id = current_tenant()`).then(x => x.rows[0]));
+    res.json(row || {});
+  } catch (e) { next(e); }
+});
+
 r.get('/clinicians', async (req, res, next) => {
   try {
     const rows = await withTenant(req.ctx, (db) =>

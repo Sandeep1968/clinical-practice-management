@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { Avatar } from '../ui.jsx';
 
-const TABS = ['Overview', 'Treatment Plans', 'Prescriptions', 'Appointments'];
+const TABS = ['Overview', 'Treatment Plans', 'Prescriptions', 'Documents', 'Appointments'];
 
 export default function PatientChart({ user }) {
   const { id } = useParams();
@@ -15,6 +15,7 @@ export default function PatientChart({ user }) {
   const [elig, setElig] = useState(null);
   const [checking, setChecking] = useState(false);
   const [tps, setTps] = useState([]);
+  const [docs, setDocs] = useState([]);
 
   useEffect(() => {
     api(`/clients/${id}`).then(setClient).catch(() => {});
@@ -24,6 +25,7 @@ export default function PatientChart({ user }) {
       .then(r => setAppts((r?.data || []).filter(a => a.client_id === id))).catch(() => {});
     api(`/eligibility/client/${id}`).then(setElig).catch(() => {});
     api(`/treatment-plans/client/${id}`).then(r => setTps(r?.data || [])).catch(() => {});
+    api(`/documents/client/${id}`).then(r => setDocs(r?.data || [])).catch(() => {});
   }, [id]);
 
   const verify = async () => {
@@ -151,6 +153,34 @@ export default function PatientChart({ user }) {
                 </tr>
               ))}
               {!rx.length && <tr><td colSpan="4" className="muted">No prescriptions.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === 'Documents' && (
+        <div className="card">
+          <div className="card-head">
+            <h3>Documents & signed forms</h3>
+            <button onClick={() => navigate('/documents')}>Send a form</button>
+          </div>
+          <table>
+            <thead><tr><th>Document</th><th>Type</th><th>Added</th><th>Status</th></tr></thead>
+            <tbody>
+              {docs.map(d => (
+                <tr key={d.id}>
+                  <td><b>{d.title}</b>{d.description && <div className="muted">{d.description}</div>}</td>
+                  <td className="muted">{d.kind.replaceAll('_', ' ')}</td>
+                  <td className="muted">{new Date(d.created_at).toLocaleDateString()}</td>
+                  <td>
+                    <span className={`badge ${d.status === 'signed' ? 'funded' : d.status === 'pending_signature' ? 'in_revision' : 'draft'}`}>
+                      {d.status.replaceAll('_', ' ')}
+                    </span>
+                    {d.signed_by_client_at && <div className="muted">by {d.signed_by_client_name}</div>}
+                  </td>
+                </tr>
+              ))}
+              {!docs.length && <tr><td colSpan="4" className="muted">No documents on file.</td></tr>}
             </tbody>
           </table>
         </div>

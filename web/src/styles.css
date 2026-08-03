@@ -308,5 +308,29 @@ button.big { padding: 13px 26px; font-size: 16px; }
   .signup-panel { padding: 30px 24px; }
 }
 
+/* ---------- notification bell ---------- */
+.bell-wrap { position: relative; }
+.bell { border: none; background: none; font-size: 18px; padding: 6px 8px; position: relative; }
+.bell:hover { background: var(--bg); }
+.bell-dot {
+  position: absolute; top: 0; right: 0; background: var(--red); color: #fff;
+  font-size: 10px; font-weight: 700; border-radius: 999px; padding: 1px 5px; min-width: 16px;
+}
+.bell-panel {
+  position: absolute; right: 0; top: 40px; width: 340px; z-index: 20;
+  max-height: 420px; overflow-y: auto; margin: 0;
+  box-shadow: 0 8px 28px rgba(16,19,26,.14);
+}
+
+/* ---------- message bubbles ---------- */
+.bubble-row { display: flex; margin: 8px 0; }
+.bubble-row.staff { justify-content: flex-end; }
+.bubble {
+  max-width: 74%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.45;
+  background: var(--bg); border: 1px solid var(--border);
+}
+.bubble-row.staff .bubble { background: var(--accent-soft); border-color: #cfdefb; }
+.bubble-meta { font-size: 11px; color: var(--muted); margin-top: 5px; }
+
 ::-webkit-scrollbar { width: 8px; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }

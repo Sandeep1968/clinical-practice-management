@@ -18,7 +18,7 @@ async function papi(path, opts = {}) {
   return res.json();
 }
 
-const TABS = ['Visits', 'My Plan', 'Prescriptions', 'Bills', 'Book'];
+const TABS = ['Visits', 'My Plan', 'Prescriptions', 'Forms', 'Messages', 'Bills', 'Book'];
 
 export default function Portal() {
   const [session, setSession] = useState(() => JSON.parse(localStorage.getItem('cpm_portal_user') || 'null'));
@@ -32,6 +32,11 @@ export default function Portal() {
   const [clinicians, setClinicians] = useState([]);
   const [tps, setTps] = useState([]);
   const [ackName, setAckName] = useState('');
+  const [docs, setDocs] = useState([]);
+  const [signName, setSignName] = useState('');
+  const [threads, setThreads] = useState([]);
+  const [newMsg, setNewMsg] = useState('');
+  const [payPlans, setPayPlans] = useState([]);
   const [bookForm, setBookForm] = useState({ clinicianId: '', when: '' });
   const [msg, setMsg] = useState('');
 
@@ -41,6 +46,22 @@ export default function Portal() {
     papi('/invoices').then(r => setBills(r?.data || [])).catch(() => {});
     papi('/clinicians').then(r => setClinicians(r?.data || [])).catch(() => {});
     papi('/treatment-plans').then(r => setTps(r?.data || [])).catch(() => {});
+    papi('/documents').then(r => setDocs(r?.data || [])).catch(() => {});
+    papi('/messages').then(r => setThreads(r?.data || [])).catch(() => {});
+    papi('/payment-plans').then(r => setPayPlans(r?.data || [])).catch(() => {});
+  };
+
+  const signDoc = async (id) => {
+    setMsg('');
+    try { await papi(`/documents/${id}/sign`, { method: 'POST', body: { name: signName } }); setSignName(''); loadAll(); }
+    catch (err) { setMsg(err.message); }
+  };
+
+  const sendMessage = async (threadId) => {
+    if (!newMsg.trim()) return;
+    setMsg('');
+    try { await papi('/messages', { method: 'POST', body: { threadId, body: newMsg } }); setNewMsg(''); loadAll(); }
+    catch (err) { setMsg(err.message); }
   };
 
   const acknowledge = async (id) => {
@@ -212,24 +233,106 @@ export default function Portal() {
           </div>
         )}
 
-        {tab === 'Bills' && (
-          <div className="card">
-            <table>
-              <thead><tr><th>Date</th><th>Amount</th><th>Balance</th><th>Status</th></tr></thead>
-              <tbody>
-                {bills.map(b => (
-                  <tr key={b.id}>
-                    <td>{new Date(b.created_at).toLocaleDateString()}</td>
-                    <td>${Number(b.amount).toFixed(2)}</td>
-                    <td>${Number(b.balance).toFixed(2)}</td>
-                    <td><span className={`badge ${b.status === 'paid' ? 'funded' : 'in_revision'}`}>{b.status}</span></td>
-                  </tr>
-                ))}
-                {!bills.length && <tr><td colSpan="4" className="muted">No bills. 🎉</td></tr>}
-              </tbody>
-            </table>
-            <p className="muted" style={{ marginTop: 10 }}>Online payment coming soon — contact the clinic to pay a balance.</p>
+        {tab === 'Forms' && (
+          <div>
+            {docs.map(d => (
+              <div className="card" key={d.id}>
+                <div className="card-head">
+                  <h3>{d.title}</h3>
+                  <span className={`badge ${d.status === 'signed' ? 'funded' : d.status === 'pending_signature' ? 'in_revision' : 'draft'}`}>
+                    {d.status.replaceAll('_', ' ')}
+                  </span>
+                </div>
+                {d.body && <p className="muted" style={{ whiteSpace: 'pre-wrap' }}>{d.body}</p>}
+                {d.status === 'pending_signature' ? (
+                  <div className="row" style={{ marginBottom: 0, marginTop: 12 }}>
+                    <input placeholder="Type your full name to sign" value={signName}
+                           onChange={e => setSignName(e.target.value)} style={{ flex: 1 }} />
+                    <button className="primary" disabled={!signName.trim()} onClick={() => signDoc(d.id)}>
+                      Sign electronically
+                    </button>
+                  </div>
+                ) : d.signed_by_client_at && (
+                  <p className="muted">✓ Signed {new Date(d.signed_by_client_at).toLocaleDateString()}</p>
+                )}
+              </div>
+            ))}
+            {!docs.length && <div className="card"><p className="muted">No forms to review.</p></div>}
           </div>
+        )}
+
+        {tab === 'Messages' && (
+          <div>
+            {threads.map(t => (
+              <div className="card" key={t.id}>
+                <h3>{t.subject}</h3>
+                {(t.messages || []).map((m, i) => (
+                  <div key={i} className={`bubble-row ${m.sender_kind}`}>
+                    <div className="bubble">
+                      {m.body}
+                      <div className="bubble-meta">
+                        {m.sender_kind === 'staff' ? 'Your clinic' : 'You'} · {new Date(m.created_at).toLocaleString()}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                <div className="row" style={{ marginTop: 12, marginBottom: 0 }}>
+                  <input placeholder="Reply…" value={newMsg} onChange={e => setNewMsg(e.target.value)} style={{ flex: 1 }} />
+                  <button className="primary" onClick={() => sendMessage(t.id)}>Send</button>
+                </div>
+              </div>
+            ))}
+            <div className="card">
+              <h3>New message to your clinic</h3>
+              <div className="row" style={{ marginBottom: 0 }}>
+                <input placeholder="Type your question…" value={newMsg} onChange={e => setNewMsg(e.target.value)} style={{ flex: 1 }} />
+                <button className="primary" onClick={() => sendMessage(null)}>Send</button>
+              </div>
+              <p className="muted" style={{ marginTop: 10 }}>For emergencies call 911 — messages are not monitored 24/7.</p>
+            </div>
+          </div>
+        )}
+
+        {tab === 'Bills' && (
+          <>
+            <div className="card">
+              <table>
+                <thead><tr><th>Date</th><th>Amount</th><th>Balance</th><th>Status</th></tr></thead>
+                <tbody>
+                  {bills.map(b => (
+                    <tr key={b.id}>
+                      <td>{new Date(b.created_at).toLocaleDateString()}</td>
+                      <td>${Number(b.amount).toFixed(2)}</td>
+                      <td>${Number(b.balance).toFixed(2)}</td>
+                      <td><span className={`badge ${b.status === 'paid' ? 'funded' : 'in_revision'}`}>{b.status}</span></td>
+                    </tr>
+                  ))}
+                  {!bills.length && <tr><td colSpan="4" className="muted">No bills. 🎉</td></tr>}
+                </tbody>
+              </table>
+            </div>
+            {payPlans.map(p => (
+              <div className="card" key={p.id}>
+                <div className="card-head">
+                  <h3>Payment plan</h3>
+                  <span className="muted">${Number(p.total_amount).toFixed(2)} over {p.installments} {p.cadence} payments</span>
+                </div>
+                <table>
+                  <thead><tr><th>#</th><th>Due</th><th>Amount</th><th>Status</th></tr></thead>
+                  <tbody>
+                    {p.items.map(i => (
+                      <tr key={i.id}>
+                        <td>{i.seq}</td>
+                        <td>{new Date(i.due_date).toLocaleDateString()}</td>
+                        <td>${Number(i.amount).toFixed(2)}</td>
+                        <td><span className={`badge ${i.paid_at ? 'funded' : 'draft'}`}>{i.paid_at ? 'paid' : 'upcoming'}</span></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ))}
+          </>
         )}
 
         {tab === 'Book' && (

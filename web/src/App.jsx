@@ -17,6 +17,11 @@ import Landing from './pages/Landing.jsx';
 import Signup from './pages/Signup.jsx';
 import Platform from './pages/Platform.jsx';
 import TreatmentPlans from './pages/TreatmentPlans.jsx';
+import Documents from './pages/Documents.jsx';
+import Messages from './pages/Messages.jsx';
+import Billing from './pages/Billing.jsx';
+import Customization from './pages/Customization.jsx';
+import NotificationBell from './NotificationBell.jsx';
 import { setToken } from './api.js';
 import { Avatar } from './ui.jsx';
 
@@ -28,9 +33,13 @@ const NAV = [
   { to: '/notes', label: 'Notes', icon: '✎', roles: ['clinician'] },
   { to: '/prescriptions', label: 'Prescriptions', icon: '℞', roles: ['clinician'] },
   { to: '/treatment-plans', label: 'Treatment Plans', icon: '◎', roles: ['clinician'] },
+  { to: '/documents', label: 'Documents', icon: '📄' },
+  { to: '/messages', label: 'Messages', icon: '✉' },
+  { to: '/billing', label: 'Billing', icon: '💳', roles: ['owner', 'admin', 'biller', 'front_desk'] },
   { to: '/claims', label: 'Claims', icon: '⛨', roles: ['owner', 'biller'] },
   { to: '/remittances', label: 'Remittances', icon: '💵', roles: ['owner', 'biller'] },
   { to: '/analytics', label: 'Analytics', icon: '📈', roles: ['owner', 'admin', 'biller'] },
+  { to: '/customization', label: 'Customization', icon: '🎨', roles: ['owner', 'admin', 'clinician'] },
   { to: '/settings', label: 'Settings', icon: '⚙' }
 ];
 
@@ -92,6 +101,7 @@ export default function App() {
             <input placeholder="Search patients…" value={search} onChange={e => setSearch(e.target.value)} />
           </form>
           <div className="topbar-user">
+            <NotificationBell />
             <Avatar name={user.name} />
             <div>
               <div style={{ fontWeight: 600, fontSize: 14 }}>{user.name}</div>
@@ -108,6 +118,10 @@ export default function App() {
             <Route path="/notes" element={<Notes />} />
             <Route path="/prescriptions" element={<Prescriptions />} />
             <Route path="/treatment-plans" element={<TreatmentPlans />} />
+            <Route path="/documents" element={<Documents />} />
+            <Route path="/messages" element={<Messages user={user} />} />
+            <Route path="/billing" element={<Billing />} />
+            <Route path="/customization" element={<Customization user={user} />} />
             <Route path="/claims" element={<ClaimTracker user={user} />} />
             <Route path="/remittances" element={<Remittances />} />
             <Route path="/queue" element={<Queue />} />
