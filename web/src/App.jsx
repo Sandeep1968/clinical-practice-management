@@ -14,6 +14,8 @@ import Analytics from './pages/Analytics.jsx';
 import Settings from './pages/Settings.jsx';
 import Portal from './pages/Portal.jsx';
 import Landing from './pages/Landing.jsx';
+import Signup from './pages/Signup.jsx';
+import Platform from './pages/Platform.jsx';
 import { setToken } from './api.js';
 import { Avatar } from './ui.jsx';
 
@@ -38,8 +40,9 @@ export default function App() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Patient portal is a separate app surface with its own auth
+  // Separate app surfaces with their own auth
   if (location.pathname.startsWith('/portal')) return <Portal />;
+  if (location.pathname.startsWith('/platform')) return <Platform />;
 
   const onLogin = (u) => {
     localStorage.setItem('cpm_user', JSON.stringify(u));
@@ -61,6 +64,7 @@ export default function App() {
     <Routes>
       <Route path="/" element={<Landing />} />
       <Route path="/login" element={<Login onLogin={onLogin} />} />
+      <Route path="/signup" element={<Signup onLogin={onLogin} />} />
       <Route path="*" element={<Navigate to="/" />} />
     </Routes>
   );

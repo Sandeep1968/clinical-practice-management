@@ -44,7 +44,8 @@ export default function Landing() {
           <a href="#ai">Gen AI</a>
           <Link to="/portal">Patient Portal</Link>
         </nav>
-        <Link to="/login"><button className="primary">Sign in to your clinic</button></Link>
+        <Link to="/login" className="muted" style={{ textDecoration: 'none', fontWeight: 600 }}>Sign in</Link>
+        <Link to="/signup"><button className="primary">Start free trial</button></Link>
       </header>
 
       <section className="land-hero">
@@ -53,7 +54,8 @@ export default function Landing() {
         <p>Manage appointments, EMR, billing, prescriptions, claims and patient communication — all from
           one AI-powered platform that helps you save time, improve patient care, and grow your practice.</p>
         <div className="row" style={{ justifyContent: 'center' }}>
-          <Link to="/login"><button className="primary big">📅 Sign in to your clinic</button></Link>
+          <Link to="/signup"><button className="primary big">Start your 14-day free trial</button></Link>
+          <Link to="/login"><button className="big">Sign in to your clinic</button></Link>
           <Link to="/portal"><button className="big">I'm a patient</button></Link>
         </div>
         <div className="land-stats">

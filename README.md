@@ -60,6 +60,18 @@ Demo login (seeded): `owner@demo.practice` / `Demo1234!`
 - [x] SMS appointment reminders (24h before; TCPA consent-gated; mock mode logs, set `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_FROM` for real)
 - [x] Patient portal (`/portal` — email + DOB login, visits, prescriptions, bills, self-booking; DB-level RLS scoping to own records. Demo: jamie@example.com / 1990-04-12)
 - [x] eka-style interface (topbar with global patient search, avatars, tabbed patient chart at /patients/:id, gradient stat chips)
+- [x] Public landing page at `/` (hero, interactive 360° module carousel, specialty pads, Gen AI cards, comparison)
+- [x] SaaS administration — practice self-signup with 14-day trial (`/signup`), plans & subscriptions, forgot/reset password, and a super-admin platform console (`/platform`: practices, plan changes, suspend/reactivate, MRR & platform analytics). Demo admin: `admin@clinicos.app` / `Demo1234!`
+
+## Application surfaces
+
+| URL | Who | What |
+|---|---|---|
+| `/` | Public | Marketing landing page |
+| `/signup` | New practices | Self-serve tenant creation + trial |
+| `/login` | Clinic staff | Staff app (MFA-aware) |
+| `/portal` | Patients | Visits, prescriptions, bills, self-booking |
+| `/platform` | Super-admin | Cross-tenant SaaS console |
 
 ## Demo: full revenue cycle in the UI
 

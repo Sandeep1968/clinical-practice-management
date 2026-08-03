@@ -4,9 +4,69 @@ import jwt from 'jsonwebtoken';
 import { pool, withTenant } from '../db.js';
 import { signAccess, signRefresh, requireAuth } from '../middleware/auth.js';
 import { generateSecret, verifyTotp, otpauthUri } from '../lib/totp.js';
+import crypto from 'crypto';
 
 const r = Router();
 const SECRET = process.env.JWT_SECRET || 'dev-secret';
+
+// ---------- practice self-signup (SaaS front door) ----------
+r.get('/plans', async (_req, res, next) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT code, name, price_per_seat, max_clinicians, features FROM plans WHERE active ORDER BY price_per_seat`);
+    res.json({ data: rows });
+  } catch (e) { next(e); }
+});
+
+r.post('/signup', async (req, res, next) => {
+  try {
+    const { practiceName, subdomain, fullName, email, password, plan = 'professional' } = req.body || {};
+    if (!practiceName || !subdomain || !fullName || !email || !password)
+      return res.status(400).json({ error: 'practice name, subdomain, your name, email and password are required' });
+    if (password.length < 8) return res.status(400).json({ error: 'password must be at least 8 characters' });
+    if (!/^[a-z0-9-]{3,30}$/i.test(subdomain))
+      return res.status(400).json({ error: 'subdomain must be 3-30 letters, numbers or hyphens' });
+
+    const hash = await bcrypt.hash(password, 10);
+    try {
+      const { rows } = await pool.query(
+        'SELECT * FROM signup_practice($1,$2,$3,$4,$5,$6)',
+        [practiceName, subdomain, fullName, email, hash, plan]);
+      const user = await lookup(subdomain.toLowerCase(), email);
+      issueTokens(user, res);
+    } catch (e) {
+      if (/subdomain already taken/.test(e.message))
+        return res.status(409).json({ error: 'that clinic address is already taken' });
+      throw e;
+    }
+  } catch (e) { next(e); }
+});
+
+// ---------- forgot / reset password ----------
+r.post('/forgot', async (req, res, next) => {
+  try {
+    const { email, subdomain = 'demo' } = req.body || {};
+    const token = crypto.randomBytes(24).toString('hex');
+    const { rows } = await pool.query('SELECT * FROM request_password_reset($1,$2,$3)', [subdomain, email, token]);
+    // never reveal whether the account exists
+    const payload = { ok: true, message: 'If that account exists, a reset link has been sent.' };
+    // dev convenience: surface the link when not in production
+    if (rows[0]?.found && process.env.NODE_ENV !== 'production') payload.devResetToken = token;
+    res.json(payload);
+  } catch (e) { next(e); }
+});
+
+r.post('/reset', async (req, res, next) => {
+  try {
+    const { token, password } = req.body || {};
+    if (!token || !password || password.length < 8)
+      return res.status(400).json({ error: 'token and a password of at least 8 characters are required' });
+    const hash = await bcrypt.hash(password, 10);
+    const { rows } = await pool.query('SELECT consume_password_reset($1,$2) AS ok', [token, hash]);
+    if (!rows[0].ok) return res.status(400).json({ error: 'that reset link is invalid or expired' });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
 
 async function lookup(subdomain, email) {
   const { rows } = await pool.query('SELECT * FROM auth_login_lookup($1, $2)', [subdomain, email]);
