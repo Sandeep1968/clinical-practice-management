@@ -18,7 +18,13 @@ export async function api(path, opts = {}) {
     },
     body: opts.body ? JSON.stringify(opts.body) : undefined
   });
-  if (res.status === 401) { setToken(null); window.location.href = '/login'; return; }
+  if (res.status === 401) {
+    // clear the whole session (token AND user) so the app doesn't loop
+    setToken(null);
+    localStorage.removeItem('cpm_user');
+    if (!window.location.pathname.startsWith('/login')) window.location.href = '/login';
+    return new Promise(() => {});  // halt callers during redirect
+  }
   if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error || `HTTP ${res.status}`);
   return res.json();
 }

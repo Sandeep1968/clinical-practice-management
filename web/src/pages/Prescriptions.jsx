@@ -1,11 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
 
 const emptyMed = { name: '', strength: '', frequency: '1-0-1', duration: '7 days', instructions: 'After food' };
 
 export default function Prescriptions() {
+  const [params] = useSearchParams();
   const [clients, setClients] = useState([]);
-  const [clientId, setClientId] = useState('');
+  const [clientId, setClientId] = useState(params.get('client') || '');
   const [history, setHistory] = useState([]);
   const [meds, setMeds] = useState([{ ...emptyMed }]);
   const [dx, setDx] = useState([{ code: '', label: '' }]);

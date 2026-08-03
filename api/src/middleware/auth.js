@@ -29,3 +29,19 @@ export function requireAuth(req, res, next) {
 
 export const requireRole = (...roles) => (req, res, next) =>
   roles.includes(req.ctx.role) ? next() : res.status(403).json({ error: 'forbidden' });
+
+// Patient portal sessions (typ: 'portal') — scoped to one client
+export function requirePortal(req, res, next) {
+  const token = (req.headers.authorization || '').replace('Bearer ', '');
+  try {
+    const claims = jwt.verify(token, SECRET);
+    if (claims.typ !== 'portal') throw new Error('not a portal token');
+    req.ctx = {
+      tenantId: claims.tenantId, clientId: claims.clientId,
+      userId: claims.clientId, role: 'client', ip: req.ip
+    };
+    next();
+  } catch {
+    res.status(401).json({ error: 'unauthenticated' });
+  }
+}

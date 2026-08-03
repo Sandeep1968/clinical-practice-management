@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../api.js';
+import { Avatar } from '../ui.jsx';
 
 export default function Clients({ user }) {
+  const navigate = useNavigate();
+  const [params] = useSearchParams();
   const [clients, setClients] = useState([]);
-  const [q, setQ] = useState('');
+  const [q, setQ] = useState(params.get('q') || '');
   const [form, setForm] = useState({ firstName: '', lastName: '', email: '', phone: '', smsConsent: false });
   const [elig, setElig] = useState({});   // clientId -> result
   const canCreate = ['owner', 'admin', 'front_desk'].includes(user.role);
@@ -20,7 +24,7 @@ export default function Clients({ user }) {
 
   const load = () => api(`/clients${q ? `?q=${encodeURIComponent(q)}` : ''}`)
     .then(r => setClients(r?.data || [])).catch(() => {});
-  useEffect(() => { load(); }, []);
+  useEffect(() => { load(); }, [params]);
 
   const create = async (e) => {
     e.preventDefault();
@@ -61,8 +65,13 @@ export default function Clients({ user }) {
             {clients.map(c => {
               const e = elig[c.id];
               return (
-                <tr key={c.id}>
-                  <td>{c.last_name}, {c.first_name}</td>
+                <tr key={c.id} style={{ cursor: 'pointer' }}>
+                  <td onClick={() => navigate(`/patients/${c.id}`)}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                      <Avatar name={`${c.first_name} ${c.last_name}`} size={32} />
+                      <b>{c.last_name}, {c.first_name}</b>
+                    </span>
+                  </td>
                   <td>{c.dob ? new Date(c.dob).toLocaleDateString() : '—'}</td>
                   <td>{c.email || '—'}</td>
                   <td>{c.status}</td>

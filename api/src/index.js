@@ -10,6 +10,7 @@ import remittanceRoutes from './routes/remittances.js';
 import prescriptionRoutes from './routes/prescriptions.js';
 import analyticsRoutes from './routes/analytics.js';
 import reminderRoutes from './routes/reminders.js';
+import portalRoutes from './routes/portal.js';
 import { pool } from './db.js';
 import { sendSms } from './adapters/sms.js';
 import { requireAuth } from './middleware/auth.js';
@@ -30,6 +31,7 @@ app.use('/remittances', requireAuth, remittanceRoutes);
 app.use('/prescriptions', requireAuth, prescriptionRoutes);
 app.use('/analytics', requireAuth, analyticsRoutes);
 app.use('/reminders', requireAuth, reminderRoutes);
+app.use('/portal', portalRoutes);   // portal auth handled inside (own JWT type)
 
 // Reminder worker: sends due SMS reminders every 60s.
 // PRODUCTION: move to a dedicated worker pod on a queue.

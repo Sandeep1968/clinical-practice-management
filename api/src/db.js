@@ -16,8 +16,11 @@ export async function withTenant(ctx, fn) {
     await client.query(`SELECT set_config('app.tenant_id', $1, true),
                                set_config('app.user_id', $2, true),
                                set_config('app.user_role', $3, true),
-                               set_config('app.clinician_id', $4, true)`,
-      [ctx.tenantId, ctx.userId, ctx.role, ctx.clinicianId || '00000000-0000-0000-0000-000000000000']);
+                               set_config('app.clinician_id', $4, true),
+                               set_config('app.client_id', $5, true)`,
+      [ctx.tenantId, ctx.userId, ctx.role,
+       ctx.clinicianId || '00000000-0000-0000-0000-000000000000',
+       ctx.clientId || '00000000-0000-0000-0000-000000000000']);
     const result = await fn(client);
     await client.query('COMMIT');
     return result;

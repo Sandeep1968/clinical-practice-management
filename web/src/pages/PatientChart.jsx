@@ -1,0 +1,137 @@
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { api } from '../api.js';
+import { Avatar } from '../ui.jsx';
+
+const TABS = ['Overview', 'Prescriptions', 'Appointments'];
+
+export default function PatientChart({ user }) {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [client, setClient] = useState(null);
+  const [tab, setTab] = useState('Overview');
+  const [rx, setRx] = useState([]);
+  const [appts, setAppts] = useState([]);
+  const [elig, setElig] = useState(null);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    api(`/clients/${id}`).then(setClient).catch(() => {});
+    api(`/prescriptions/client/${id}`).then(r => setRx(r?.data || [])).catch(() => {});
+    const from = new Date(Date.now() - 365 * 864e5), to = new Date(Date.now() + 90 * 864e5);
+    api(`/appointments?from=${from.toISOString()}&to=${to.toISOString()}`)
+      .then(r => setAppts((r?.data || []).filter(a => a.client_id === id))).catch(() => {});
+    api(`/eligibility/client/${id}`).then(setElig).catch(() => {});
+  }, [id]);
+
+  const verify = async () => {
+    setChecking(true);
+    try { setElig(await api('/eligibility/check', { method: 'POST', body: { clientId: id } })); }
+    catch (e) { setElig({ error: e.message }); }
+    setChecking(false);
+  };
+
+  if (!client) return <p className="muted">Loading…</p>;
+  const name = `${client.first_name} ${client.last_name}`;
+  const age = client.dob ? Math.floor((Date.now() - new Date(client.dob)) / (365.25 * 864e5)) : null;
+
+  return (
+    <>
+      <div className="chart-head card">
+        <Avatar name={name} size={56} />
+        <div style={{ flex: 1 }}>
+          <h2 style={{ margin: 0 }}>{name}</h2>
+          <div className="muted">
+            {age !== null && `${age} yrs · `}{client.dob && `DOB ${new Date(client.dob).toLocaleDateString()} · `}
+            {client.phone || 'no phone'} · {client.email || 'no email'}
+          </div>
+        </div>
+        {user.role === 'clinician' && (
+          <button className="primary" onClick={() => navigate(`/prescriptions?client=${id}`)}>+ New Rx</button>
+        )}
+      </div>
+
+      <div className="tabs">
+        {TABS.map(t => (
+          <button key={t} className={`tab ${tab === t ? 'active' : ''}`} onClick={() => setTab(t)}>{t}</button>
+        ))}
+      </div>
+
+      {tab === 'Overview' && (
+        <>
+          <div className="card">
+            <div className="card-head"><h3>Insurance & eligibility</h3>
+              <button onClick={verify} disabled={checking}>{checking ? 'Checking…' : 'Verify now'}</button>
+            </div>
+            {!elig && <p className="muted">No eligibility checks on file.</p>}
+            {elig?.error && <p className="error">{elig.error}</p>}
+            {elig && !elig.error && (
+              <div className="people-list">
+                <div className="person-row">
+                  <span className={`badge ${elig.status === 'verified' ? 'funded' : 'denied'}`}>{elig.status}</span>
+                  <div className="muted">
+                    Copay ${Number(elig.copay ?? 0).toFixed(0)} · Deductible remaining ${Number(elig.deductible_remaining ?? elig.deductibleRemaining ?? 0).toFixed(0)}
+                    {elig.checked_at && ` · checked ${new Date(elig.checked_at).toLocaleDateString()}`}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="card">
+            <h3>Recent activity</h3>
+            <div className="people-list">
+              {[...appts].slice(0, 5).map(a => (
+                <div className="person-row" key={a.id}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600 }}>{new Date(a.starts_at).toLocaleDateString()}</div>
+                    <div className="muted">{a.appt_type} · {a.location}</div>
+                  </div>
+                  <span className={`badge ${a.status}`}>{a.status.replaceAll('_', ' ')}</span>
+                </div>
+              ))}
+              {!appts.length && <p className="muted">No visits yet.</p>}
+            </div>
+          </div>
+        </>
+      )}
+
+      {tab === 'Prescriptions' && (
+        <div className="card">
+          <table>
+            <thead><tr><th>Date</th><th>Medications</th><th>Diagnoses</th><th>By</th></tr></thead>
+            <tbody>
+              {rx.map(p => (
+                <tr key={p.id}>
+                  <td>{new Date(p.created_at).toLocaleDateString()}</td>
+                  <td>{(p.medications || []).map(m => m.name).join(', ')}</td>
+                  <td className="muted">{(p.diagnoses || []).map(d => d.label).join(', ') || '—'}</td>
+                  <td>{p.clinician_name}</td>
+                </tr>
+              ))}
+              {!rx.length && <tr><td colSpan="4" className="muted">No prescriptions.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === 'Appointments' && (
+        <div className="card">
+          <table>
+            <thead><tr><th>Date & time</th><th>Type</th><th>Location</th><th>Status</th></tr></thead>
+            <tbody>
+              {appts.map(a => (
+                <tr key={a.id}>
+                  <td>{new Date(a.starts_at).toLocaleString()}</td>
+                  <td>{a.appt_type}</td>
+                  <td>{a.location}</td>
+                  <td><span className={`badge ${a.status}`}>{a.status.replaceAll('_', ' ')}</span></td>
+                </tr>
+              ))}
+              {!appts.length && <tr><td colSpan="4" className="muted">No appointments.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </>
+  );
+}
