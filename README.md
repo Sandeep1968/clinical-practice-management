@@ -25,6 +25,25 @@ docker-compose.yml
 | Scalability | Stateless API (scale pods behind LB), pg connection pooling, keyset pagination, indexes on all FK/lookup paths, async-job seams for eligibility/claims/AI notes |
 | Claims | Status machine: draft → submitted → in_revision / pending_patient_liability → funded (denied → in_revision), full `claim_status_history` audit trail |
 
+## Seeing stale UI?
+
+Source is bind-mounted into the containers, so code changes apply on restart.
+If a page still looks old:
+
+```bash
+./dev.sh          # down → rebuild --no-cache → up (prints URLs)
+```
+
+then open a **private/incognito window** (rules out browser cache), or in DevTools →
+Network → tick **Disable cache** and refresh.
+
+Fastest UI loop (no Docker rebuilds at all):
+
+```bash
+docker compose up -d db api    # backend in Docker
+cd web && npm install && npm run dev   # Vite on the host, instant hot reload
+```
+
 ## Quick Start
 
 ```bash
