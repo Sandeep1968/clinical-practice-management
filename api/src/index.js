@@ -6,6 +6,7 @@ import appointmentRoutes from './routes/appointments.js';
 import encounterRoutes from './routes/encounters.js';
 import claimRoutes from './routes/claims.js';
 import eligibilityRoutes from './routes/eligibility.js';
+import remittanceRoutes from './routes/remittances.js';
 import { requireAuth } from './middleware/auth.js';
 
 const app = express();
@@ -20,6 +21,7 @@ app.use('/appointments', requireAuth, appointmentRoutes);
 app.use('/encounters', requireAuth, encounterRoutes);
 app.use('/claims', requireAuth, claimRoutes);
 app.use('/eligibility', requireAuth, eligibilityRoutes);
+app.use('/remittances', requireAuth, remittanceRoutes);
 
 // central error handler — never leak internals
 app.use((err, _req, res, _next) => {

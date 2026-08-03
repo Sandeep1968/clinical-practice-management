@@ -6,6 +6,7 @@ import Clients from './pages/Clients.jsx';
 import Appointments from './pages/Appointments.jsx';
 import ClaimTracker from './pages/ClaimTracker.jsx';
 import Notes from './pages/Notes.jsx';
+import Remittances from './pages/Remittances.jsx';
 import { setToken } from './api.js';
 
 export default function App() {
@@ -36,6 +37,7 @@ export default function App() {
           <NavLink to="/appointments">Schedule</NavLink>
           {user.role === 'clinician' && <NavLink to="/notes">Notes</NavLink>}
           {['owner', 'biller'].includes(user.role) && <NavLink to="/claims">Claim Tracker</NavLink>}
+          {['owner', 'biller'].includes(user.role) && <NavLink to="/remittances">Remittances</NavLink>}
         </nav>
         <div className="user-box">
           <div>{user.name}</div>
@@ -50,6 +52,7 @@ export default function App() {
           <Route path="/appointments" element={<Appointments user={user} />} />
           <Route path="/notes" element={<Notes />} />
           <Route path="/claims" element={<ClaimTracker user={user} />} />
+          <Route path="/remittances" element={<Remittances />} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </main>

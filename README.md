@@ -52,7 +52,7 @@ Demo login (seeded): `owner@demo.practice` / `Demo1234!`
 - [x] Pverify eligibility adapter (`api/src/adapters/pverify.js` — mock mode; set `PVERIFY_CLIENT_ID`/`PVERIFY_CLIENT_SECRET` for real)
 - [x] Clearinghouse 837P submission adapter (`api/src/adapters/clearinghouse.js` — mock adjudication ~20s; set `CLEARINGHOUSE_API_KEY` for real)
 - [x] AI note drafting (`api/src/adapters/ai_notes.js` — template mock; set `ANTHROPIC_API_KEY` for real, requires vendor BAA)
-- [ ] ERA 835 auto-posting
+- [x] ERA 835 auto-posting (`api/src/adapters/era.js` — mock generates payer payments at 80% with CO-45/PR-2 adjustments; claims auto-move to Funded, patient balances auto-invoiced)
 - [ ] Client portal
 
 ## Demo: full revenue cycle in the UI
