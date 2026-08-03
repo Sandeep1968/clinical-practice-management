@@ -6,11 +6,11 @@ INSERT INTO tenants (id, name, subdomain) VALUES
 
 INSERT INTO users (id, tenant_id, email, password_hash, full_name) VALUES
   ('22222222-2222-2222-2222-222222222221', '11111111-1111-1111-1111-111111111111',
-   'owner@demo.practice', '$2a$10$8K1yVvXqYQ.d5o0eXvXhK.9WZ8bqQfXGpVYFJvVYzXHZ0eNQ0eN0e', 'Dana Owner'),
+   'owner@demo.practice', '$2a$10$/eVpdNUdxA0dJSjB8smtJOCj/WZY0kwEUW4Uzi5ppXm56PCIdKTUu', 'Dana Owner'),
   ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111',
-   'clinician@demo.practice', '$2a$10$8K1yVvXqYQ.d5o0eXvXhK.9WZ8bqQfXGpVYFJvVYzXHZ0eNQ0eN0e', 'Casey Clinician'),
+   'clinician@demo.practice', '$2a$10$/eVpdNUdxA0dJSjB8smtJOCj/WZY0kwEUW4Uzi5ppXm56PCIdKTUu', 'Casey Clinician'),
   ('22222222-2222-2222-2222-222222222223', '11111111-1111-1111-1111-111111111111',
-   'biller@demo.practice', '$2a$10$8K1yVvXqYQ.d5o0eXvXhK.9WZ8bqQfXGpVYFJvVYzXHZ0eNQ0eN0e', 'Blair Biller');
+   'biller@demo.practice', '$2a$10$/eVpdNUdxA0dJSjB8smtJOCj/WZY0kwEUW4Uzi5ppXm56PCIdKTUu', 'Blair Biller');
 
 INSERT INTO user_roles (user_id, role) VALUES
   ('22222222-2222-2222-2222-222222222221', 'owner'),

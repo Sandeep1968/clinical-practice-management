@@ -292,6 +292,26 @@ CREATE POLICY clinician_scope_notes ON notes AS RESTRICTIVE
 -- notes content: only the treating clinician reads note bodies (minimum necessary).
 -- Owners/admins/billers work from encounter metadata, not note text — enforced app-side
 -- via column selection; break-glass reads must call the audited RPC below.
+-- Login lookup: runs before any tenant context exists, so it must bypass RLS.
+-- SECURITY DEFINER (owner = migration superuser) and read-only by design.
+CREATE OR REPLACE FUNCTION auth_login_lookup(p_subdomain TEXT, p_email TEXT)
+RETURNS TABLE (id UUID, tenant_id UUID, email TEXT, password_hash TEXT,
+               full_name TEXT, role user_role, clinician_id UUID)
+LANGUAGE sql SECURITY DEFINER AS $$
+  SELECT u.id, u.tenant_id, u.email, u.password_hash, u.full_name,
+         (SELECT ur.role FROM user_roles ur WHERE ur.user_id = u.id
+          ORDER BY CASE ur.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1
+                   WHEN 'biller' THEN 2 WHEN 'clinician' THEN 3 ELSE 4 END
+          LIMIT 1),
+         c.id
+  FROM users u
+  JOIN tenants t ON t.id = u.tenant_id
+  LEFT JOIN clinicians c ON c.user_id = u.id
+  WHERE t.subdomain = p_subdomain AND lower(u.email) = lower(p_email)
+    AND u.status = 'active' AND t.status = 'active'
+$$;
+GRANT EXECUTE ON FUNCTION auth_login_lookup(TEXT, TEXT) TO app_user;
+
 CREATE OR REPLACE FUNCTION break_glass_read_note(p_note UUID, p_reason TEXT)
 RETURNS TABLE (final_text TEXT) LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
