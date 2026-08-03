@@ -3,6 +3,15 @@ import { Link } from 'react-router-dom';
 import { api } from '../api.js';
 import { Avatar, greeting } from '../ui.jsx';
 
+const MODULES = [
+  { n: 1, title: 'Digital Prescription', desc: 'Write & share Rx in seconds', to: '/prescriptions', roles: ['clinician'] },
+  { n: 2, title: 'Clinic Management', desc: 'Queue, billing & more', to: '/queue' },
+  { n: 3, title: 'Patient Engagement', desc: 'Reminders & follow-ups', to: '/settings' },
+  { n: 4, title: 'Practice Analytics', desc: 'Revenue & trend insights', to: '/analytics', roles: ['owner', 'admin', 'biller'] },
+  { n: 5, title: 'Multi-Login Setup', desc: 'Multi-doctor & staff access', to: '/settings' },
+  { n: 6, title: 'AI Scribe', desc: 'AI-drafted clinical notes', to: '/notes', roles: ['clinician'] }
+];
+
 export default function Dashboard({ user }) {
   const [appts, setAppts] = useState([]);
   const [unsigned, setUnsigned] = useState([]);
@@ -45,6 +54,25 @@ export default function Dashboard({ user }) {
             <div className="num">${outstanding.toLocaleString()}</div><div className="label">Outstanding claims</div>
           </div>
         )}
+      </div>
+
+      <div className="section-head">
+        <h3 style={{ margin: '4px 0 2px' }}>360° Practice Management</h3>
+        <p className="muted" style={{ margin: '0 0 12px' }}>
+          One clinic software for prescriptions, appointments, patient engagement, and analytics.
+        </p>
+      </div>
+      <div className="feature-grid">
+        {MODULES.filter(m => !m.roles || m.roles.includes(user.role)).map(m => (
+          <Link to={m.to} className="feature-card" key={m.n}>
+            <span className="feature-num">{m.n}</span>
+            <div>
+              <div className="feature-title">{m.title}</div>
+              <div className="muted">{m.desc}</div>
+            </div>
+            <span className="feature-arrow">→</span>
+          </Link>
+        ))}
       </div>
 
       <div className="card">

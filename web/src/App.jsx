@@ -13,6 +13,7 @@ import Prescriptions from './pages/Prescriptions.jsx';
 import Analytics from './pages/Analytics.jsx';
 import Settings from './pages/Settings.jsx';
 import Portal from './pages/Portal.jsx';
+import Landing from './pages/Landing.jsx';
 import { setToken } from './api.js';
 import { Avatar } from './ui.jsx';
 
@@ -56,7 +57,13 @@ export default function App() {
     navigate(`/clients?q=${encodeURIComponent(search)}`);
   };
 
-  if (!user) return <Routes><Route path="*" element={<Login onLogin={onLogin} />} /></Routes>;
+  if (!user) return (
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/login" element={<Login onLogin={onLogin} />} />
+      <Route path="*" element={<Navigate to="/" />} />
+    </Routes>
+  );
 
   return (
     <div className="layout">
