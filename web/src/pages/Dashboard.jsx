@@ -23,11 +23,11 @@ export default function Dashboard({ user }) {
 
   return (
     <>
-      <div className="hero">
-        <div>
-          <h2 style={{ marginBottom: 4 }}>{greeting()}, {user.name.split(' ')[0]}</h2>
-          <p className="muted">{new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-        </div>
+      <div className="hero-banner">
+        <h2>{greeting()}, {user.name.split(' ')[0]} 👋</h2>
+        <p className="muted" style={{ margin: 0 }}>
+          {new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })} — your clinic at a glance
+        </p>
       </div>
 
       <div className="stat-grid">
