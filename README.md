@@ -77,6 +77,7 @@ Demo login (seeded): `owner@demo.practice` / `Demo1234!`
 - [x] Practice analytics (revenue by month, claims funnel, no-show rate)
 - [x] MFA (TOTP, RFC 6238 — enroll in Settings; two-step login once enabled)
 - [x] SMS appointment reminders (24h before; TCPA consent-gated; mock mode logs, set `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_FROM` for real)
+- [x] Scheduling (behavioral-health complete) — day/week/month calendar grid, clinician availability rules driving portal self-booking, recurring weekly/biweekly series with conflict-skip, waitlist with preference matching on freed slots, SMS **and** email reminders, late-cancel/no-show fee policy auto-invoiced, telehealth licensure check (clinician must be licensed in the client's state), group/couple session participants, emergency contact
 - [x] Documents & e-signatures — form/consent template library, send-to-portal for signature, patient e-sign, uploads register, staff countersign, chart Documents tab
 - [x] Communication — secure two-way messaging (staff inbox ↔ patient portal) and patient broadcasts (SMS consent-gated, or portal message) with audience targeting
 - [x] Notifications — in-app bell with unread badge, role-scoped feed, mark-read, deep links

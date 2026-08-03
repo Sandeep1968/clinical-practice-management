@@ -200,8 +200,12 @@ button:disabled { opacity: .55; cursor: default; }
   font-size: 13px; font-weight: 600; padding: 8px 16px;
 }
 .land-nav {
-  display: flex; align-items: center; gap: 26px; padding: 16px 6vw;
-  background: var(--bg); position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 26px; padding: 14px 6vw;
+  position: sticky; top: 0; z-index: 30;
+  background: rgba(255, 255, 255, .88);
+  backdrop-filter: saturate(180%) blur(12px);
+  -webkit-backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: 1px solid var(--border);
 }
 .land-logo { font-weight: 800; font-size: 20px; color: var(--text); }
 .land-nav nav { display: flex; gap: 22px; margin: 0 auto; }
@@ -214,6 +218,12 @@ button:disabled { opacity: .55; cursor: default; }
   padding: 6px 14px; border-radius: 999px; margin-bottom: 14px;
 }
 .chip.small { font-size: 11px; padding: 4px 10px; letter-spacing: .02em; text-transform: none; margin: 6px 0 0; }
+.chip.chip-live { background: var(--green-soft); color: var(--green); }
+.ai-icon {
+  display: inline-grid; place-items: center; width: 40px; height: 40px;
+  border-radius: 12px; background: var(--accent-soft); color: var(--accent);
+  font-size: 19px; margin-bottom: 4px;
+}
 
 .land-hero { text-align: center; padding: 56px 6vw 40px; max-width: 900px; margin: 0 auto; }
 .land-hero h1 { font-size: clamp(34px, 5vw, 54px); line-height: 1.08; margin: 8px 0 18px; letter-spacing: -.03em; }
@@ -222,9 +232,16 @@ button:disabled { opacity: .55; cursor: default; }
 button.big { padding: 13px 26px; font-size: 16px; }
 .land-stats { display: flex; gap: 28px; justify-content: center; margin-top: 26px; color: var(--muted); font-size: 14px; flex-wrap: wrap; }
 
-.land-section { padding: 54px 6vw; max-width: 1100px; margin: 0 auto; }
-.land-section h2 { font-size: clamp(26px, 3.4vw, 38px); letter-spacing: -.02em; margin: 4px 0 10px; }
-.land-sub { color: var(--muted); font-size: 16px; max-width: 640px; margin: 0 0 26px; }
+.land-section {
+  padding: 60px 6vw; max-width: 1140px; margin: 0 auto;
+  scroll-margin-top: 76px;          /* anchor jumps clear the sticky nav */
+}
+.land-section h2 {
+  font-size: clamp(26px, 3.2vw, 36px); letter-spacing: -.02em;
+  margin: 4px 0 10px; max-width: 760px; line-height: 1.18;
+}
+.land-sub { color: var(--muted); font-size: 16px; max-width: 640px; margin: 0 0 28px; line-height: 1.55; }
+.land-section + .land-section { border-top: 1px solid var(--border); }
 
 /* 360 carousel */
 .carousel { display: grid; grid-template-columns: 1fr 1.3fr; gap: 26px; align-items: start; }
@@ -249,12 +266,23 @@ button.big { padding: 13px 26px; font-size: 16px; }
 .spec-card b { display: block; margin-bottom: 6px; font-size: 16px; }
 .spec-card p { margin: 0; line-height: 1.5; }
 
-/* gen AI */
-.ai-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 16px; }
-.ai-card { margin: 0; position: relative; }
+/* gen AI — 4 across on desktop so the row fills evenly */
+.ai-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; align-items: stretch; }
+.ai-card {
+  margin: 0; position: relative; display: flex; flex-direction: column;
+  transition: transform .12s, box-shadow .12s;
+}
+.ai-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(37,99,235,.14); }
 .ai-card .ai-num { position: absolute; top: 16px; right: 18px; color: #c3cbe0; font-weight: 700; }
 .ai-card b { display: block; margin: 10px 0 6px; font-size: 16px; }
 .ai-card p { margin: 0; line-height: 1.5; }
+@media (max-width: 1000px) { .ai-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .ai-grid { grid-template-columns: 1fr; } }
+
+/* specialty cards: equal height too */
+.spec-card { display: flex; flex-direction: column; transition: transform .12s, box-shadow .12s; }
+.spec-card:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(37,99,235,.14); }
+.spec-card .chip.small { margin-top: auto; align-self: flex-start; }
 
 /* compare */
 .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
@@ -307,6 +335,42 @@ button.big { padding: 13px 26px; font-size: 16px; }
   .signup-wrap { grid-template-columns: 1fr; }
   .signup-panel { padding: 30px 24px; }
 }
+
+/* ---------- calendar ---------- */
+.cal-month-head, .cal-month { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal-month-head { margin-bottom: 6px; }
+.cal-month-head div { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; padding: 4px; }
+.cal-cell {
+  min-height: 92px; border: 1px solid var(--border); border-radius: 10px; padding: 5px;
+  display: flex; flex-direction: column; gap: 3px; background: var(--panel);
+}
+.cal-cell.dim { background: #fafbfd; }
+.cal-cell.dim .cal-date { color: #b9c0d0; }
+.cal-cell.today { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+.cal-date { font-size: 12px; font-weight: 700; color: var(--muted); }
+
+.cal-grid { display: grid; gap: 4px; min-width: 680px; }
+.cal-grid.week { grid-template-columns: 54px repeat(7, 1fr); }
+.cal-grid.day { grid-template-columns: 54px 1fr; }
+.cal-gutter { padding-top: 30px; }
+.cal-hour { height: 48px; position: relative; }
+.cal-hour span { position: absolute; top: -7px; right: 6px; font-size: 11px; color: var(--muted); }
+.cal-col-head {
+  height: 30px; font-size: 12px; color: var(--muted); text-align: center;
+  border-bottom: 1px solid var(--border);
+}
+.cal-col-head.today { color: var(--accent); font-weight: 700; }
+.cal-col-body { position: relative; }
+.cal-slot { height: 48px; border-bottom: 1px solid #f0f2f7; }
+.cal-event {
+  background: var(--accent-soft); color: var(--accent-dark); border-left: 3px solid var(--accent);
+  border-radius: 6px; padding: 3px 6px; font-size: 11px; line-height: 1.3;
+  overflow: hidden; cursor: pointer;
+}
+.cal-event:hover { filter: brightness(.97); }
+.cal-event.completed { background: var(--green-soft); color: var(--green); border-left-color: var(--green); }
+.cal-event.cancelled, .cal-event.no_show { background: var(--red-soft); color: var(--red); border-left-color: var(--red); text-decoration: line-through; }
+.cal-event.arrived { background: var(--amber-soft); color: var(--amber); border-left-color: var(--amber); }
 
 /* ---------- notification bell ---------- */
 .bell-wrap { position: relative; }

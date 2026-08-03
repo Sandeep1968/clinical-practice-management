@@ -22,10 +22,10 @@ const SPECIALTIES = [
 ];
 
 const AI_CARDS = [
-  ['01', 'DocAssist Summary', 'Instantly summarizes patient history and past visits, so you walk into every consultation prepared.'],
-  ['02', 'DocAssist Chat', "Ask questions in plain language and get instant answers from your patient's record."],
-  ['03', 'Simplified Digital Prescriptions', 'AI-assisted prescription writing with ICD-10 coding built in.'],
-  ['04', 'AI Scribe', 'Listens to your consultation and turns it into a structured clinical note — human sign-off always required.']
+  ['01', '📋', 'Chart Summary', 'Instantly summarizes patient history and past visits, so you walk into every consultation prepared.', 'Roadmap'],
+  ['02', '💬', 'Chart Chat', "Ask questions in plain language and get instant answers from your patient's record.", 'Roadmap'],
+  ['03', '℞', 'Simplified Digital Prescriptions', 'AI-assisted prescription writing with ICD-10 coding built in.', 'Live'],
+  ['04', '✎', 'AI Scribe', 'Turns your consultation into a structured clinical note — human sign-off always required.', 'Live']
 ];
 
 export default function Landing() {
@@ -108,13 +108,16 @@ export default function Landing() {
 
       <section id="ai" className="land-section">
         <span className="chip">• GEN AI</span>
-        <h2>Discover Innovative Generative AI Solutions for Healthcare</h2>
+        <h2>Generative AI built into the clinical workflow</h2>
         <p className="land-sub">Improving patient care, diagnostics, and operational efficiency — with a clinician signature on every record.</p>
         <div className="ai-grid">
-          {AI_CARDS.map(([num, title, desc]) => (
+          {AI_CARDS.map(([num, icon, title, desc, state]) => (
             <div className="card ai-card" key={num}>
               <span className="ai-num">{num}</span>
-              <span className="chip small">GEN AI</span>
+              <span className="ai-icon">{icon}</span>
+              <span className={`chip small ${state === 'Live' ? 'chip-live' : ''}`}>
+                {state === 'Live' ? '● Live' : 'Roadmap'}
+              </span>
               <b>{title}</b>
               <p className="muted">{desc}</p>
             </div>

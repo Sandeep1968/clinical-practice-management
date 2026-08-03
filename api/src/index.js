@@ -20,6 +20,8 @@ import billingRoutes from './routes/billing.js';
 import customizationRoutes from './routes/customization.js';
 import { pool } from './db.js';
 import { sendSms } from './adapters/sms.js';
+import { sendEmail } from './adapters/email.js';
+import schedulingRoutes from './routes/scheduling.js';
 import { requireAuth } from './middleware/auth.js';
 
 const app = express();
@@ -42,6 +44,7 @@ app.use('/messages', requireAuth, messageRoutes);
 app.use('/notifications', requireAuth, notificationRoutes);
 app.use('/billing', requireAuth, billingRoutes);
 app.use('/customization', requireAuth, customizationRoutes);
+app.use('/scheduling', requireAuth, schedulingRoutes);
 app.use('/analytics', requireAuth, analyticsRoutes);
 app.use('/reminders', requireAuth, reminderRoutes);
 app.use('/portal', portalRoutes);     // patient portal — own JWT type
@@ -53,15 +56,19 @@ setInterval(async () => {
   try {
     const { rows } = await pool.query('SELECT * FROM fetch_due_reminders(50)');
     for (const rem of rows) {
-      if (!rem.phone || !rem.sms_consent) {
-        await pool.query('SELECT mark_reminder($1, $2, $3)', [rem.id, 'skipped_no_consent', null]);
-        continue;
-      }
       try {
-        const sms = await sendSms({ to: rem.phone, body: rem.message });
-        await pool.query('SELECT mark_reminder($1, $2, $3)', [rem.id, 'sent', sms.sid]);
+        if (rem.channel === 'email') {
+          if (!rem.email) { await pool.query('SELECT mark_reminder($1,$2,$3)', [rem.id, 'skipped_no_consent', null]); continue; }
+          const mail = await sendEmail({ to: rem.email, subject: 'Appointment reminder', text: rem.message });
+          await pool.query('SELECT mark_reminder($1,$2,$3)', [rem.id, 'sent', mail.id]);
+        } else {
+          // TCPA: SMS requires explicit consent + a number on file
+          if (!rem.phone || !rem.sms_consent) { await pool.query('SELECT mark_reminder($1,$2,$3)', [rem.id, 'skipped_no_consent', null]); continue; }
+          const sms = await sendSms({ to: rem.phone, body: rem.message });
+          await pool.query('SELECT mark_reminder($1,$2,$3)', [rem.id, 'sent', sms.sid]);
+        }
       } catch (e) {
-        await pool.query('SELECT mark_reminder($1, $2, $3)', [rem.id, 'failed', e.message]);
+        await pool.query('SELECT mark_reminder($1,$2,$3)', [rem.id, 'failed', e.message]);
       }
     }
   } catch (e) { console.error('[reminder-worker]', e.message); }

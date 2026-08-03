@@ -22,6 +22,8 @@ import Messages from './pages/Messages.jsx';
 import Billing from './pages/Billing.jsx';
 import Customization from './pages/Customization.jsx';
 import NotificationBell from './NotificationBell.jsx';
+import Calendar from './pages/Calendar.jsx';
+import Scheduling from './pages/Scheduling.jsx';
 import { setToken } from './api.js';
 import { Avatar } from './ui.jsx';
 
@@ -29,7 +31,8 @@ const NAV = [
   { to: '/', label: 'Dashboard', icon: '⌂', end: true },
   { to: '/queue', label: 'Queue', icon: '⏱' },
   { to: '/clients', label: 'Patients', icon: '👥' },
-  { to: '/appointments', label: 'Schedule', icon: '📅' },
+  { to: '/calendar', label: 'Calendar', icon: '📅' },
+  { to: '/scheduling', label: 'Scheduling', icon: '🗂' },
   { to: '/notes', label: 'Notes', icon: '✎', roles: ['clinician'] },
   { to: '/prescriptions', label: 'Prescriptions', icon: '℞', roles: ['clinician'] },
   { to: '/treatment-plans', label: 'Treatment Plans', icon: '◎', roles: ['clinician'] },
@@ -114,6 +117,8 @@ export default function App() {
             <Route path="/" element={<Dashboard user={user} />} />
             <Route path="/clients" element={<Clients user={user} />} />
             <Route path="/patients/:id" element={<PatientChart user={user} />} />
+            <Route path="/calendar" element={<Calendar />} />
+            <Route path="/scheduling" element={<Scheduling user={user} />} />
             <Route path="/appointments" element={<Appointments user={user} />} />
             <Route path="/notes" element={<Notes />} />
             <Route path="/prescriptions" element={<Prescriptions />} />

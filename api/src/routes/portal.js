@@ -2,6 +2,7 @@ import { Router } from 'express';
 import jwt from 'jsonwebtoken';
 import { pool, withTenant } from '../db.js';
 import { requirePortal } from '../middleware/auth.js';
+import { computeSlots } from './scheduling.js';
 
 const r = Router();
 const SECRET = process.env.JWT_SECRET || 'dev-secret';
@@ -212,27 +213,76 @@ r.get('/clinicians', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Self-service booking (50-minute slot)
+// Open slots from the clinician's availability rules
+r.get('/slots/:clinicianId', async (req, res, next) => {
+  try {
+    const slots = await withTenant(req.ctx, async (db) => {
+      const cfg = await db.query(
+        `SELECT booking_lead_hours, booking_horizon_days FROM branding WHERE tenant_id = current_tenant()`);
+      return computeSlots(db, {
+        clinicianId: req.params.clinicianId,
+        days: Math.min(cfg.rows[0]?.booking_horizon_days || 60, 60),
+        leadHours: cfg.rows[0]?.booking_lead_hours ?? 12
+      });
+    });
+    res.json({ data: slots });
+  } catch (e) { next(e); }
+});
+
+// Self-service booking — must land on a real open slot
 r.post('/book', async (req, res, next) => {
   try {
-    const { clinicianId, startsAt } = req.body || {};
+    const { clinicianId, startsAt, location = 'office', clientState } = req.body || {};
     if (!clinicianId || !startsAt) return res.status(400).json({ error: 'clinicianId and startsAt required' });
     if (new Date(startsAt) < new Date()) return res.status(400).json({ error: 'pick a future time' });
-    const endsAt = new Date(new Date(startsAt).getTime() + 50 * 60000).toISOString();
 
     const created = await withTenant(req.ctx, async (db) => {
-      const clash = await db.query(
-        `SELECT 1 FROM appointments WHERE clinician_id = $1 AND status NOT IN ('cancelled','no_show')
-         AND tstzrange(starts_at, ends_at) && tstzrange($2::timestamptz, $3::timestamptz)`,
-        [clinicianId, startsAt, endsAt]);
-      if (clash.rowCount) { const e = new Error('that time is no longer available'); e.status = 409; e.expose = true; throw e; }
+      // telehealth licensure: clinician must be licensed where the client is located
+      if (location === 'telehealth') {
+        const st = clientState || (await db.query(
+          `SELECT state FROM clients WHERE id = $1`, [req.ctx.clientId])).rows[0]?.state;
+        const lic = await db.query(`SELECT licensed_states FROM clinicians WHERE id = $1`, [clinicianId]);
+        const states = lic.rows[0]?.licensed_states || [];
+        if (st && states.length && !states.includes(st)) {
+          const e = new Error(`this provider is not licensed to deliver telehealth in ${st}`);
+          e.status = 422; e.expose = true; throw e;
+        }
+      }
+
+      const cfg = await db.query(
+        `SELECT booking_lead_hours, booking_horizon_days FROM branding WHERE tenant_id = current_tenant()`);
+      const slots = await computeSlots(db, {
+        clinicianId,
+        days: Math.min(cfg.rows[0]?.booking_horizon_days || 60, 60),
+        leadHours: cfg.rows[0]?.booking_lead_hours ?? 12
+      });
+      const slot = slots.find(s => s.startsAt === new Date(startsAt).toISOString());
+      if (!slot) { const e = new Error('that time is no longer available'); e.status = 409; e.expose = true; throw e; }
+
       const { rows } = await db.query(
-        `INSERT INTO appointments (tenant_id, client_id, clinician_id, starts_at, ends_at, appt_type)
-         VALUES (current_tenant(), $1, $2, $3, $4, 'session') RETURNING *`,
-        [req.ctx.clientId, clinicianId, startsAt, endsAt]);
+        `INSERT INTO appointments (tenant_id, client_id, clinician_id, starts_at, ends_at, appt_type, location, client_state)
+         VALUES (current_tenant(), $1, $2, $3, $4, 'session', $5, $6) RETURNING *`,
+        [req.ctx.clientId, clinicianId, slot.startsAt, slot.endsAt, location, clientState || null]);
+      await db.query(
+        `INSERT INTO notifications (tenant_id, role_scope, kind, title, body, link)
+         VALUES (current_tenant(), 'front_desk', 'appointment', 'New online booking',
+                 'A patient booked through the portal.', '/queue')`);
       return rows[0];
     });
     res.status(201).json(created);
+  } catch (e) { next(e); }
+});
+
+// Join the waitlist when nothing suitable is open
+r.post('/waitlist', async (req, res, next) => {
+  try {
+    const { clinicianId, preferredWeekdays = [], notes } = req.body || {};
+    const row = await withTenant(req.ctx, (db) =>
+      db.query(
+        `INSERT INTO waitlist_entries (tenant_id, client_id, clinician_id, preferred_weekdays, notes)
+         VALUES (current_tenant(), $1, $2, $3, $4) RETURNING *`,
+        [req.ctx.clientId, clinicianId || null, preferredWeekdays, notes || null]).then(x => x.rows[0]));
+    res.status(201).json(row);
   } catch (e) { next(e); }
 });
 
