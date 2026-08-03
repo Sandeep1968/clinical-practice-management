@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { api } from '../api.js';
 import { Avatar } from '../ui.jsx';
 
-const TABS = ['Overview', 'Prescriptions', 'Appointments'];
+const TABS = ['Overview', 'Treatment Plans', 'Prescriptions', 'Appointments'];
 
 export default function PatientChart({ user }) {
   const { id } = useParams();
@@ -14,6 +14,7 @@ export default function PatientChart({ user }) {
   const [appts, setAppts] = useState([]);
   const [elig, setElig] = useState(null);
   const [checking, setChecking] = useState(false);
+  const [tps, setTps] = useState([]);
 
   useEffect(() => {
     api(`/clients/${id}`).then(setClient).catch(() => {});
@@ -22,6 +23,7 @@ export default function PatientChart({ user }) {
     api(`/appointments?from=${from.toISOString()}&to=${to.toISOString()}`)
       .then(r => setAppts((r?.data || []).filter(a => a.client_id === id))).catch(() => {});
     api(`/eligibility/client/${id}`).then(setElig).catch(() => {});
+    api(`/treatment-plans/client/${id}`).then(r => setTps(r?.data || [])).catch(() => {});
   }, [id]);
 
   const verify = async () => {
@@ -93,6 +95,46 @@ export default function PatientChart({ user }) {
             </div>
           </div>
         </>
+      )}
+
+      {tab === 'Treatment Plans' && (
+        <div className="card">
+          <div className="card-head">
+            <h3>Treatment plans</h3>
+            {user.role === 'clinician' &&
+              <button onClick={() => navigate(`/treatment-plans?client=${id}`)}>+ New plan</button>}
+          </div>
+          <table>
+            <thead><tr><th>Plan</th><th>Version</th><th>Goals</th><th>Progress</th><th>Review</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              {tps.map(t => (
+                <tr key={t.id}>
+                  <td><b>{t.title}</b><div className="muted">{t.clinician_name}</div></td>
+                  <td>v{t.version}</td>
+                  <td>{t.goal_count}</td>
+                  <td>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span style={{ background: '#eef0f6', borderRadius: 6, height: 8, width: 80 }}>
+                        <span style={{ display: 'block', width: `${t.avg_progress}%`, background: 'var(--accent)', height: 8, borderRadius: 6 }} />
+                      </span>
+                      <span className="muted">{t.avg_progress}%</span>
+                    </span>
+                  </td>
+                  <td className="muted">{t.review_date ? new Date(t.review_date).toLocaleDateString() : '—'}</td>
+                  <td>
+                    <span className={`badge ${t.status === 'active' ? 'funded' : t.status === 'draft' ? 'draft' : 'submitted'}`}>{t.status}</span>
+                    {t.client_ack_at && <div className="muted">pt. acknowledged</div>}
+                  </td>
+                  <td>
+                    {user.role === 'clinician' &&
+                      <button onClick={() => navigate(`/treatment-plans?plan=${t.id}`)}>open</button>}
+                  </td>
+                </tr>
+              ))}
+              {!tps.length && <tr><td colSpan="7" className="muted">No treatment plans on file.</td></tr>}
+            </tbody>
+          </table>
+        </div>
       )}
 
       {tab === 'Prescriptions' && (

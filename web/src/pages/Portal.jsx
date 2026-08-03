@@ -18,7 +18,7 @@ async function papi(path, opts = {}) {
   return res.json();
 }
 
-const TABS = ['Visits', 'Prescriptions', 'Bills', 'Book'];
+const TABS = ['Visits', 'My Plan', 'Prescriptions', 'Bills', 'Book'];
 
 export default function Portal() {
   const [session, setSession] = useState(() => JSON.parse(localStorage.getItem('cpm_portal_user') || 'null'));
@@ -30,6 +30,8 @@ export default function Portal() {
   const [rx, setRx] = useState([]);
   const [bills, setBills] = useState([]);
   const [clinicians, setClinicians] = useState([]);
+  const [tps, setTps] = useState([]);
+  const [ackName, setAckName] = useState('');
   const [bookForm, setBookForm] = useState({ clinicianId: '', when: '' });
   const [msg, setMsg] = useState('');
 
@@ -38,6 +40,15 @@ export default function Portal() {
     papi('/prescriptions').then(r => setRx(r?.data || [])).catch(() => {});
     papi('/invoices').then(r => setBills(r?.data || [])).catch(() => {});
     papi('/clinicians').then(r => setClinicians(r?.data || [])).catch(() => {});
+    papi('/treatment-plans').then(r => setTps(r?.data || [])).catch(() => {});
+  };
+
+  const acknowledge = async (id) => {
+    setMsg('');
+    try {
+      await papi(`/treatment-plans/${id}/acknowledge`, { method: 'POST', body: { name: ackName } });
+      setAckName(''); loadAll();
+    } catch (err) { setMsg(err.message); }
   };
   useEffect(() => { if (session && portalToken) loadAll(); }, [session]);
 
@@ -126,6 +137,55 @@ export default function Portal() {
               ))}
               {!appts.length && <p className="muted">No visits yet.</p>}
             </div>
+          </div>
+        )}
+
+        {tab === 'My Plan' && (
+          <div>
+            {tps.map(p => (
+              <div className="card" key={p.id}>
+                <div className="card-head">
+                  <h3>{p.title}</h3>
+                  <span className="muted">{p.clinician_name}</span>
+                </div>
+                {p.presenting_problem && <p className="muted">{p.presenting_problem}</p>}
+                <p className="muted">
+                  {p.frequency}{p.modality && ` · ${p.modality}`}
+                  {p.review_date && ` · next review ${new Date(p.review_date).toLocaleDateString()}`}
+                </p>
+                {(p.goals || []).map((g, i) => (
+                  <div key={i} style={{ padding: '10px 0', borderTop: '1px solid var(--border)' }}>
+                    <div style={{ fontWeight: 600, marginBottom: 4 }}>{g.goal}</div>
+                    {(g.objectives || []).map((o, oi) => (
+                      <div className="muted" key={oi} style={{ paddingLeft: 12 }}>• {o.text}</div>
+                    ))}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
+                      <span style={{ background: '#eef0f6', borderRadius: 6, height: 8, flex: 1 }}>
+                        <span style={{ display: 'block', width: `${g.progress_pct}%`, background: 'var(--accent)', height: 8, borderRadius: 6 }} />
+                      </span>
+                      <span className="muted">{g.progress_pct}%</span>
+                    </div>
+                  </div>
+                ))}
+                {p.client_ack_at ? (
+                  <p className="muted" style={{ marginTop: 12 }}>
+                    ✓ You acknowledged this plan on {new Date(p.client_ack_at).toLocaleDateString()}.
+                  </p>
+                ) : (
+                  <div style={{ marginTop: 14, paddingTop: 12, borderTop: '1px solid var(--border)' }}>
+                    <p className="muted">Type your full name to acknowledge you've reviewed this plan with your provider.</p>
+                    <div className="row" style={{ marginBottom: 0 }}>
+                      <input placeholder="Your full name" value={ackName} onChange={e => setAckName(e.target.value)} />
+                      <button className="primary" disabled={!ackName.trim()} onClick={() => acknowledge(p.id)}>
+                        Sign & acknowledge
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
+            {!tps.length && <div className="card"><p className="muted">No treatment plan has been shared with you yet.</p></div>}
+            {msg && <p className="muted">{msg}</p>}
           </div>
         )}
 

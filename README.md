@@ -58,6 +58,7 @@ Demo login (seeded): `owner@demo.practice` / `Demo1234!`
 - [x] Practice analytics (revenue by month, claims funnel, no-show rate)
 - [x] MFA (TOTP, RFC 6238 — enroll in Settings; two-step login once enabled)
 - [x] SMS appointment reminders (24h before; TCPA consent-gated; mock mode logs, set `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_FROM` for real)
+- [x] Treatment plans — versioned goals/objectives with measurable targets, interventions, progress tracking, clinician e-signature (sign-to-lock), revision creating a new version, and patient acknowledgement in the portal
 - [x] Patient portal (`/portal` — email + DOB login, visits, prescriptions, bills, self-booking; DB-level RLS scoping to own records. Demo: jamie@example.com / 1990-04-12)
 - [x] eka-style interface (topbar with global patient search, avatars, tabbed patient chart at /patients/:id, gradient stat chips)
 - [x] Public landing page at `/` (hero, interactive 360° module carousel, specialty pads, Gen AI cards, comparison)

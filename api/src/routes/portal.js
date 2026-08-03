@@ -55,6 +55,41 @@ r.get('/prescriptions', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// Signed treatment plans (RLS hides drafts) + acknowledgement
+r.get('/treatment-plans', async (req, res, next) => {
+  try {
+    const rows = await withTenant(req.ctx, async (db) => {
+      const plans = await db.query(
+        `SELECT tp.id, tp.title, tp.presenting_problem, tp.frequency, tp.modality,
+                tp.start_date, tp.review_date, tp.signed_at, tp.client_ack_at, u.full_name AS clinician_name
+         FROM treatment_plans tp
+         JOIN clinicians cl ON cl.id = tp.clinician_id JOIN users u ON u.id = cl.user_id
+         WHERE tp.client_id = $1 ORDER BY tp.created_at DESC`, [req.ctx.clientId]);
+      for (const p of plans.rows) {
+        const g = await db.query(
+          `SELECT goal, objectives, status, progress_pct FROM treatment_goals WHERE plan_id = $1 ORDER BY seq`, [p.id]);
+        p.goals = g.rows;
+      }
+      return plans.rows;
+    });
+    res.json({ data: rows });
+  } catch (e) { next(e); }
+});
+
+r.post('/treatment-plans/:id/acknowledge', async (req, res, next) => {
+  try {
+    const { name } = req.body || {};
+    if (!name?.trim()) return res.status(400).json({ error: 'type your full name to sign' });
+    const ok = await withTenant(req.ctx, (db) =>
+      db.query(
+        `UPDATE treatment_plans SET client_ack_at = now(), client_ack_name = $1
+          WHERE id = $2 AND client_id = $3 AND client_ack_at IS NULL RETURNING id`,
+        [name.trim(), req.params.id, req.ctx.clientId]).then(x => x.rowCount));
+    if (!ok) return res.status(409).json({ error: 'already acknowledged' });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+});
+
 r.get('/invoices', async (req, res, next) => {
   try {
     const rows = await withTenant(req.ctx, (db) =>

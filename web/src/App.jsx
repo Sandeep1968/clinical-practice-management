@@ -16,6 +16,7 @@ import Portal from './pages/Portal.jsx';
 import Landing from './pages/Landing.jsx';
 import Signup from './pages/Signup.jsx';
 import Platform from './pages/Platform.jsx';
+import TreatmentPlans from './pages/TreatmentPlans.jsx';
 import { setToken } from './api.js';
 import { Avatar } from './ui.jsx';
 
@@ -26,6 +27,7 @@ const NAV = [
   { to: '/appointments', label: 'Schedule', icon: '📅' },
   { to: '/notes', label: 'Notes', icon: '✎', roles: ['clinician'] },
   { to: '/prescriptions', label: 'Prescriptions', icon: '℞', roles: ['clinician'] },
+  { to: '/treatment-plans', label: 'Treatment Plans', icon: '◎', roles: ['clinician'] },
   { to: '/claims', label: 'Claims', icon: '⛨', roles: ['owner', 'biller'] },
   { to: '/remittances', label: 'Remittances', icon: '💵', roles: ['owner', 'biller'] },
   { to: '/analytics', label: 'Analytics', icon: '📈', roles: ['owner', 'admin', 'biller'] },
@@ -105,6 +107,7 @@ export default function App() {
             <Route path="/appointments" element={<Appointments user={user} />} />
             <Route path="/notes" element={<Notes />} />
             <Route path="/prescriptions" element={<Prescriptions />} />
+            <Route path="/treatment-plans" element={<TreatmentPlans />} />
             <Route path="/claims" element={<ClaimTracker user={user} />} />
             <Route path="/remittances" element={<Remittances />} />
             <Route path="/queue" element={<Queue />} />
