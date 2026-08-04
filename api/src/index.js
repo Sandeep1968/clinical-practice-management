@@ -1,5 +1,6 @@
 import express from 'express';
-import cors from 'cors';
+import { config } from './config.js';
+import { securityHeaders, cors, rateLimit, notFound, errorHandler } from './middleware/security.js';
 import authRoutes from './routes/auth.js';
 import clientRoutes from './routes/clients.js';
 import appointmentRoutes from './routes/appointments.js';
@@ -22,13 +23,22 @@ import { pool } from './db.js';
 import { sendSms } from './adapters/sms.js';
 import { sendEmail } from './adapters/email.js';
 import schedulingRoutes from './routes/scheduling.js';
+import financialRoutes from './routes/financials.js';
 import { requireAuth } from './middleware/auth.js';
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+if (config.trustProxy) app.set('trust proxy', 1);   // correct client IP behind a load balancer
+app.disable('x-powered-by');
+app.use(securityHeaders);
+app.use(cors);
+app.use(express.json({ limit: '1mb' }));
+app.use(rateLimit({ windowMs: 60_000, max: 300 }));  // global ceiling; /auth is tighter
 
-app.get('/health', (_req, res) => res.json({ ok: true }));
+app.get('/health', (_req, res) => res.json({ ok: true, env: config.env }));
+app.get('/ready', async (_req, res) => {
+  try { await pool.query('SELECT 1'); res.json({ ready: true }); }
+  catch { res.status(503).json({ ready: false }); }
+});
 
 app.use('/auth', authRoutes);
 app.use('/clients', requireAuth, clientRoutes);
@@ -45,6 +55,7 @@ app.use('/notifications', requireAuth, notificationRoutes);
 app.use('/billing', requireAuth, billingRoutes);
 app.use('/customization', requireAuth, customizationRoutes);
 app.use('/scheduling', requireAuth, schedulingRoutes);
+app.use('/financials', requireAuth, financialRoutes);
 app.use('/analytics', requireAuth, analyticsRoutes);
 app.use('/reminders', requireAuth, reminderRoutes);
 app.use('/portal', portalRoutes);     // patient portal — own JWT type
@@ -74,11 +85,17 @@ setInterval(async () => {
   } catch (e) { console.error('[reminder-worker]', e.message); }
 }, 60000);
 
-// central error handler — never leak internals
-app.use((err, _req, res, _next) => {
-  console.error(err);
-  res.status(err.status || 500).json({ error: err.expose ? err.message : 'internal error' });
-});
+app.use(notFound);
+app.use(errorHandler);
 
-const port = process.env.PORT || 4000;
-app.listen(port, () => console.log(`CPM API listening on :${port}`));
+const server = app.listen(config.port, () =>
+  console.log(`ClinicOS API listening on :${config.port} (${config.env})`));
+
+// Graceful shutdown so in-flight transactions finish before the pod dies
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, () => {
+    console.log(`${sig} received — draining`);
+    server.close(async () => { await pool.end().catch(() => {}); process.exit(0); });
+    setTimeout(() => process.exit(1), 15_000).unref();
+  });
+}

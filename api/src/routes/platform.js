@@ -1,12 +1,14 @@
 // Platform (super-admin) console — spans tenants. Separate credential store,
 // separate JWT type; a practice token can never reach these routes.
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool } from '../db.js';
+import { verifyPassword } from '../lib/password.js';
+import { authLimiter } from '../middleware/security.js';
+import { config } from '../config.js';
 
 const r = Router();
-const SECRET = process.env.JWT_SECRET || 'dev-secret';
+const SECRET = config.jwtSecret;
 
 function requirePlatform(req, res, next) {
   const token = (req.headers.authorization || '').replace('Bearer ', '');
@@ -20,13 +22,15 @@ function requirePlatform(req, res, next) {
   }
 }
 
-r.post('/login', async (req, res, next) => {
+r.post('/login', authLimiter, async (req, res, next) => {
   try {
     const { email, password } = req.body || {};
     const { rows } = await pool.query('SELECT * FROM platform_login_lookup($1)', [email || '']);
     const admin = rows[0];
-    if (!admin || !(await bcrypt.compare(password || '', admin.password_hash)))
-      return res.status(401).json({ error: 'invalid credentials' });
+    const { ok } = admin
+      ? await verifyPassword(password || '', admin.password_hash)
+      : { ok: false };
+    if (!ok) return res.status(401).json({ error: 'invalid credentials' });
     res.json({
       token: jwt.sign({ typ: 'platform', sub: admin.id, name: admin.full_name }, SECRET, { expiresIn: '2h' }),
       name: admin.full_name

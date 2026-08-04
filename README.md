@@ -1,6 +1,6 @@
 # Clinical Practice Management Platform
 
-Multi-tenant, HIPAA-oriented SaaS for US clinical practices. Built from the
+Multi-tenant practice management SaaS for US behavioral health practices. Built from the
 [Workflow & Architecture Document](docs/Clinical_Practice_Management_Workflow.docx).
 
 **Revenue-cycle spine:** Client → Appointment → Insurance Verification → Session →
@@ -54,6 +54,13 @@ cd web && npm i && npm run dev   # Frontend on :5173
 
 Demo login (seeded): `owner@demo.practice` / `Demo1234!`
 
+## ⚠ Before selling or demoing with real data
+
+Read **[COMPLIANCE.md](COMPLIANCE.md)** first. Key points: this software is not "HIPAA
+compliant" (no software is) — it provides safeguards supporting a customer's compliance
+program; a signed BAA is required before any PHI enters the system, including demos; and
+every subcontractor touching PHI needs one too.
+
 ## Security Notes (production checklist)
 
 - Swap bcrypt → **Argon2id**; enable the TOTP MFA stub; put TLS everywhere.
@@ -77,6 +84,7 @@ Demo login (seeded): `owner@demo.practice` / `Demo1234!`
 - [x] Practice analytics (revenue by month, claims funnel, no-show rate)
 - [x] MFA (TOTP, RFC 6238 — enroll in Settings; two-step login once enabled)
 - [x] SMS appointment reminders (24h before; TCPA consent-gated; mock mode logs, set `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN`/`TWILIO_FROM` for real)
+- [x] Billing (behavioral-health complete) — service code / fee schedule (CPT 90791, 90834, 90837, 90846, 90847, 90853 seeded, editable — not hardcoded), sliding-scale & self-pay fee agreements with effective-rate resolution, **Good Faith Estimates** (No Surprises Act) with a compliance work queue for self-pay clients missing one, printable superbills for out-of-network reimbursement, client statements, CMS-1500 field map
 - [x] Scheduling (behavioral-health complete) — day/week/month calendar grid, clinician availability rules driving portal self-booking, recurring weekly/biweekly series with conflict-skip, waitlist with preference matching on freed slots, SMS **and** email reminders, late-cancel/no-show fee policy auto-invoiced, telehealth licensure check (clinician must be licensed in the client's state), group/couple session participants, emergency contact
 - [x] Documents & e-signatures — form/consent template library, send-to-portal for signature, patient e-sign, uploads register, staff countersign, chart Documents tab
 - [x] Communication — secure two-way messaging (staff inbox ↔ patient portal) and patient broadcasts (SMS consent-gated, or portal message) with audience targeting

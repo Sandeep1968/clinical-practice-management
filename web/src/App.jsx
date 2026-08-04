@@ -24,6 +24,7 @@ import Customization from './pages/Customization.jsx';
 import NotificationBell from './NotificationBell.jsx';
 import Calendar from './pages/Calendar.jsx';
 import Scheduling from './pages/Scheduling.jsx';
+import Financials from './pages/Financials.jsx';
 import { setToken } from './api.js';
 import { Avatar } from './ui.jsx';
 
@@ -39,6 +40,7 @@ const NAV = [
   { to: '/documents', label: 'Documents', icon: '📄' },
   { to: '/messages', label: 'Messages', icon: '✉' },
   { to: '/billing', label: 'Billing', icon: '💳', roles: ['owner', 'admin', 'biller', 'front_desk'] },
+  { to: '/financials', label: 'Financials', icon: '🧾', roles: ['owner', 'admin', 'biller', 'clinician'] },
   { to: '/claims', label: 'Claims', icon: '⛨', roles: ['owner', 'biller'] },
   { to: '/remittances', label: 'Remittances', icon: '💵', roles: ['owner', 'biller'] },
   { to: '/analytics', label: 'Analytics', icon: '📈', roles: ['owner', 'admin', 'biller'] },
@@ -126,6 +128,7 @@ export default function App() {
             <Route path="/documents" element={<Documents />} />
             <Route path="/messages" element={<Messages user={user} />} />
             <Route path="/billing" element={<Billing />} />
+            <Route path="/financials" element={<Financials />} />
             <Route path="/customization" element={<Customization user={user} />} />
             <Route path="/claims" element={<ClaimTracker user={user} />} />
             <Route path="/remittances" element={<Remittances />} />

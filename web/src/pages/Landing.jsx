@@ -6,7 +6,7 @@ const MODULES = [
   { n: 2, title: 'Clinic Management', sub: 'Queue, billing & more', heading: 'Manage your clinic effectively & successfully.', points: ['Manage walk-ins & appointments in a single queue', 'Automated SMS follow-up reminders', 'Easily manage billing, claims & due payments'] },
   { n: 3, title: 'Patient Engagement', sub: 'Reminders & portal', heading: 'Stay connected with your patients, always.', points: ['Automated reminders for bookings (TCPA consent-gated)', 'Patient portal — visits, prescriptions, bills, self-booking', 'Digital prescriptions shared instantly'] },
   { n: 4, title: 'Practice Analytics', sub: 'Revenue & trend insights', heading: 'Get comprehensive analytics for your practice.', points: ['Real-time revenue & appointment insights', 'Claims funnel with payout visibility', 'No-show and utilization trends'] },
-  { n: 5, title: 'Multi-Login Setup', sub: 'Multi-doctor & staff access', heading: 'Set up multiple doctors & staff with one clinic account.', points: ['Owner, admin, clinician, biller & front-desk roles', 'Each staff member sees only what they need to', 'Clinician data isolation enforced in the database'] },
+  { n: 5, title: 'Multi-Clinician Setup', sub: 'Group practice & staff access', heading: 'Real clinician data isolation for group practices.', points: ['Owner, admin, clinician, biller & front-desk roles', 'Clinicians see only their own caseload — enforced by database row-level security, not UI filtering', 'Break-glass access is logged with a documented reason'] },
   { n: 6, title: 'AI Scribe', sub: 'AI clinical notes', heading: 'Let AI write the note while you focus on the patient.', points: ['AI-drafted SOAP / DAP / BIRP notes', 'Clinician reviews, edits & signs — signature is the record', 'Signed notes release billing automatically'] }
 ];
 
@@ -34,7 +34,7 @@ export default function Landing() {
 
   return (
     <div className="landing">
-      <div className="land-strip">🏥 All-in-One Clinic Management Software · HIPAA-grade security · Built for US practices</div>
+      <div className="land-strip">🏥 All-in-One Practice Management · Built for US behavioral health practices</div>
 
       <header className="land-nav">
         <div className="land-logo">＋ ClinicOS</div>
@@ -61,7 +61,7 @@ export default function Landing() {
         <div className="land-stats">
           <span><b>Full</b> revenue-cycle automation</span>
           <span><b>AI</b> clinical documentation</span>
-          <span><b>HIPAA</b> compliant by design</span>
+          <span><b>HIPAA-ready</b> safeguards &amp; signed BAA</span>
         </div>
       </section>
 

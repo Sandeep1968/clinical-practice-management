@@ -3,12 +3,14 @@ import jwt from 'jsonwebtoken';
 import { pool, withTenant } from '../db.js';
 import { requirePortal } from '../middleware/auth.js';
 import { computeSlots } from './scheduling.js';
+import { config } from '../config.js';
+import { authLimiter } from '../middleware/security.js';
 
 const r = Router();
-const SECRET = process.env.JWT_SECRET || 'dev-secret';
+const SECRET = config.jwtSecret;
 
 // Patient login: email + DOB (scaffold; production: OTP)
-r.post('/login', async (req, res, next) => {
+r.post('/login', authLimiter, async (req, res, next) => {
   try {
     const { email, dob, subdomain = 'demo' } = req.body || {};
     if (!email || !dob) return res.status(400).json({ error: 'email and date of birth required' });
@@ -191,6 +193,38 @@ r.get('/payment-plans', async (req, res, next) => {
       return plans.rows;
     });
     res.json({ data });
+  } catch (e) { next(e); }
+});
+
+// Good Faith Estimates, statements and superbills the client can see/acknowledge
+r.get('/financial-docs', async (req, res, next) => {
+  try {
+    const data = await withTenant(req.ctx, async (db) => {
+      const gfe = await db.query(
+        `SELECT id, service_description, rate_per_session, expected_sessions, total_estimate,
+                period_months, issued_at, client_ack_at, notes
+         FROM good_faith_estimates WHERE client_id = $1 ORDER BY issued_at DESC`, [req.ctx.clientId]);
+      const st = await db.query(
+        `SELECT id, period_start, period_end, charges, payments, balance, lines, generated_at
+         FROM statements WHERE client_id = $1 ORDER BY generated_at DESC LIMIT 12`, [req.ctx.clientId]);
+      const sb = await db.query(
+        `SELECT id, period_start, period_end, total, lines, generated_at
+         FROM superbills WHERE client_id = $1 ORDER BY generated_at DESC LIMIT 12`, [req.ctx.clientId]);
+      return { estimates: gfe.rows, statements: st.rows, superbills: sb.rows };
+    });
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+r.post('/financial-docs/gfe/:id/acknowledge', async (req, res, next) => {
+  try {
+    const ok = await withTenant(req.ctx, (db) =>
+      db.query(
+        `UPDATE good_faith_estimates SET client_ack_at = now()
+          WHERE id = $1 AND client_id = $2 AND client_ack_at IS NULL RETURNING id`,
+        [req.params.id, req.ctx.clientId]).then(x => x.rowCount));
+    if (!ok) return res.status(409).json({ error: 'already acknowledged' });
+    res.json({ ok: true });
   } catch (e) { next(e); }
 });
 

@@ -2,12 +2,21 @@
 // the RLS context (app.tenant_id / app.user_id / app.user_role / app.clinician_id)
 // so PostgreSQL — not application code — enforces isolation.
 import pg from 'pg';
+import { config } from './config.js';
 
 export const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL || 'postgres://app_user:app_pass@localhost:5432/cpm',
-  max: 20,                       // per-pod pool; scale pods horizontally
-  idleTimeoutMillis: 30000
+  connectionString: config.databaseUrl,
+  max: +(process.env.PG_POOL_MAX || 20),   // per-pod pool; scale pods horizontally
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000,
+  // TLS to the database is required in production (transmission security)
+  ssl: process.env.DATABASE_SSL === 'true'
+    ? { rejectUnauthorized: process.env.DATABASE_SSL_INSECURE !== 'true' }
+    : undefined
 });
+
+pool.on('error', (err) => console.error(JSON.stringify(
+  { level: 'error', scope: 'pg-pool', message: err.message })));
 
 export async function withTenant(ctx, fn) {
   const client = await pool.connect();

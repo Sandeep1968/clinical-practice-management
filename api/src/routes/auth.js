@@ -1,13 +1,18 @@
 import { Router } from 'express';
-import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { pool, withTenant } from '../db.js';
 import { signAccess, signRefresh, requireAuth } from '../middleware/auth.js';
 import { generateSecret, verifyTotp, otpauthUri } from '../lib/totp.js';
+import { hashPassword, verifyPassword } from '../lib/password.js';
+import { authLimiter } from '../middleware/security.js';
+import { config } from '../config.js';
 import crypto from 'crypto';
 
 const r = Router();
-const SECRET = process.env.JWT_SECRET || 'dev-secret';
+const SECRET = config.jwtSecret;
+
+// brute-force protection on every credential-accepting endpoint
+r.use(['/login', '/mfa/complete', '/signup', '/forgot', '/reset'], authLimiter);
 
 // ---------- practice self-signup (SaaS front door) ----------
 r.get('/plans', async (_req, res, next) => {
@@ -27,7 +32,7 @@ r.post('/signup', async (req, res, next) => {
     if (!/^[a-z0-9-]{3,30}$/i.test(subdomain))
       return res.status(400).json({ error: 'subdomain must be 3-30 letters, numbers or hyphens' });
 
-    const hash = await bcrypt.hash(password, 10);
+    const hash = await hashPassword(password);
     try {
       const { rows } = await pool.query(
         'SELECT * FROM signup_practice($1,$2,$3,$4,$5,$6)',
@@ -61,7 +66,7 @@ r.post('/reset', async (req, res, next) => {
     const { token, password } = req.body || {};
     if (!token || !password || password.length < 8)
       return res.status(400).json({ error: 'token and a password of at least 8 characters are required' });
-    const hash = await bcrypt.hash(password, 10);
+    const hash = await hashPassword(password);
     const { rows } = await pool.query('SELECT consume_password_reset($1,$2) AS ok', [token, hash]);
     if (!rows[0].ok) return res.status(400).json({ error: 'that reset link is invalid or expired' });
     res.json({ ok: true });
@@ -88,9 +93,24 @@ r.post('/login', async (req, res, next) => {
     if (!email || !password) return res.status(400).json({ error: 'email and password required' });
 
     const user = await lookup(subdomain, email);
-    if (!user) return res.status(401).json({ error: 'invalid credentials' });
-    const ok = await bcrypt.compare(password, user.password_hash);
+    if (!user) {
+      // constant-ish work so response timing doesn't reveal whether the account exists
+      await verifyPassword(password, 'scrypt$32768$8$1$AAAA$AAAA');
+      return res.status(401).json({ error: 'invalid credentials' });
+    }
+    const { ok, needsUpgrade } = await verifyPassword(password, user.password_hash);
     if (!ok) return res.status(401).json({ error: 'invalid credentials' });
+
+    // silently migrate legacy bcrypt hashes to scrypt on successful login
+    if (needsUpgrade) {
+      const fresh = await hashPassword(password);
+      await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [fresh, user.id])
+        .catch(() => {});
+    }
+
+    if (config.requireMfaForStaff && !user.mfa_enabled) {
+      return res.status(403).json({ error: 'this practice requires two-factor authentication — contact your administrator to enrol' });
+    }
 
     if (user.mfa_enabled) {
       const mfaToken = jwt.sign({ typ: 'mfa', email, subdomain }, SECRET, { expiresIn: '5m' });
