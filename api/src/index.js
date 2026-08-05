@@ -34,7 +34,7 @@ app.use(cors);
 app.use(express.json({ limit: '1mb' }));
 app.use(rateLimit({ windowMs: 60_000, max: 300 }));  // global ceiling; /auth is tighter
 
-app.get('/health', (_req, res) => res.json({ ok: true, env: config.env }));
+app.get('/health', (_req, res) => res.json({ ok: true, env: config.env, demo: config.demoMode }));
 app.get('/ready', async (_req, res) => {
   try { await pool.query('SELECT 1'); res.json({ ready: true }); }
   catch { res.status(503).json({ ready: false }); }
@@ -84,6 +84,28 @@ setInterval(async () => {
     }
   } catch (e) { console.error('[reminder-worker]', e.message); }
 }, 60000);
+
+// ---- serve the built React app (single-image deploys) ----
+// Mounted AFTER all API routes so it never shadows them.
+if (config.serveStatic) {
+  const { default: express2 } = await import('express');
+  const path = await import('node:path');
+  const { fileURLToPath } = await import('node:url');
+  const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'public');
+
+  // hashed assets are immutable; index.html must never be cached
+  app.use('/assets', express2.static(path.join(dir, 'assets'), {
+    maxAge: '1y', immutable: true
+  }));
+  app.use(express2.static(dir, { index: false, maxAge: '1h' }));
+
+  // SPA fallback — any non-API path returns index.html so client routing works
+  app.get('*', (req, res, next) => {
+    if (req.path.startsWith('/api/')) return next();
+    res.setHeader('Cache-Control', 'no-store');
+    res.sendFile(path.join(dir, 'index.html'));
+  });
+}
 
 app.use(notFound);
 app.use(errorHandler);

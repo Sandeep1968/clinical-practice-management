@@ -13,7 +13,11 @@ export const config = {
     .split(',').map(s => s.trim()).filter(Boolean),
   accessTokenTtl: process.env.ACCESS_TOKEN_TTL || '15m',
   requireMfaForStaff: process.env.REQUIRE_MFA === 'true',
-  trustProxy: process.env.TRUST_PROXY === 'true'
+  trustProxy: process.env.TRUST_PROXY === 'true',
+  // serve the built React app from this process (single-image deploys)
+  serveStatic: process.env.SERVE_STATIC === 'true',
+  // public demo with seeded fake data — surfaces a banner, blocks nothing
+  demoMode: process.env.DEMO_MODE === 'true'
 };
 
 if (!config.jwtSecret || config.jwtSecret === 'change-me-in-prod' || config.jwtSecret === 'dev-secret') {
@@ -30,11 +34,14 @@ if (!config.databaseUrl) {
 if (PROD && config.databaseUrl?.includes('app_pass')) {
   problems.push('DATABASE_URL still uses the default development password');
 }
-if (PROD && config.corsOrigins.some(o => o.includes('localhost'))) {
+// same-origin deploys serve the SPA from this process, so no CORS allowlist is needed
+if (PROD && !config.serveStatic && config.corsOrigins.some(o => o.includes('localhost'))) {
   problems.push('CORS_ORIGINS contains localhost in production');
 }
-if (PROD && !process.env.DATABASE_SSL) {
-  problems.push('DATABASE_SSL must be set in production (TLS to the database)');
+// Must be an explicit decision. "false" is only defensible on an encrypted
+// private network (e.g. Fly 6PN / WireGuard); anything public needs "true".
+if (PROD && process.env.DATABASE_SSL === undefined) {
+  problems.push('DATABASE_SSL must be set explicitly ("true", or "false" only on a private encrypted network)');
 }
 
 if (problems.length) {

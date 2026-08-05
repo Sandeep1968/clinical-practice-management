@@ -1,4 +1,6 @@
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+// `??` not `||` — in production VITE_API_URL is deliberately "" (same origin),
+// and an empty string is falsy, which would wrongly fall back to localhost.
+export const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 
 let accessToken = localStorage.getItem('cpm_token');
 

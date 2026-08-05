@@ -372,6 +372,20 @@ button.big { padding: 13px 26px; font-size: 16px; }
 .cal-event.cancelled, .cal-event.no_show { background: var(--red-soft); color: var(--red); border-left-color: var(--red); text-decoration: line-through; }
 .cal-event.arrived { background: var(--amber-soft); color: var(--amber); border-left-color: var(--amber); }
 
+/* ---------- demo banner ---------- */
+.demo-banner {
+  position: sticky; top: 0; z-index: 200;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  background: #78350f; color: #fde68a;
+  font-size: 13px; padding: 8px 44px 8px 16px; text-align: center;
+}
+.demo-banner b { color: #fff; }
+.demo-banner button {
+  position: absolute; right: 10px; background: none; border: none;
+  color: #fde68a; font-size: 20px; line-height: 1; cursor: pointer; padding: 0 6px;
+}
+.demo-banner button:hover { color: #fff; }
+
 /* ---------- notification bell ---------- */
 .bell-wrap { position: relative; }
 .bell { border: none; background: none; font-size: 18px; padding: 6px 8px; position: relative; }

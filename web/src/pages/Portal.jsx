@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Avatar } from '../ui.jsx';
 
-const BASE = import.meta.env.VITE_API_URL || 'http://localhost:4000';
+const BASE = import.meta.env.VITE_API_URL ?? 'http://localhost:4000';
 let portalToken = localStorage.getItem('cpm_portal_token');
 
 async function papi(path, opts = {}) {

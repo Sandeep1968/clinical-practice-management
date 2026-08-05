@@ -1,0 +1,46 @@
+# Fly.io deployment — public DEMO with seeded fake data.
+# Do NOT put real patient data on this app: no BAA, no encryption at rest.
+# See PRODUCTION_READINESS.md before anything resembling production.
+
+app = "clinicos-demo"
+primary_region = "sjc"
+
+[build]
+  dockerfile = "Dockerfile"
+
+# Migrations run once per deploy, before the new machines take traffic.
+# This is why replicas never race each other applying the same migration.
+[deploy]
+  release_command = "sh -c 'npm run migrate && npm run seed'"
+  strategy = "immediate"
+
+[env]
+  NODE_ENV = "production"
+  PORT = "4000"
+  SERVE_STATIC = "true"
+  TRUST_PROXY = "true"
+  DEMO_MODE = "true"
+  DATABASE_SSL = "false"          # Fly private network is WireGuard-encrypted
+
+[http_service]
+  internal_port = 4000
+  force_https = true
+  auto_stop_machines = "suspend"  # scales to zero when idle — free-tier friendly
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    soft_limit = 200
+    hard_limit = 250
+
+[[http_service.checks]]
+  grace_period = "25s"
+  interval = "30s"
+  method = "GET"
+  timeout = "5s"
+  path = "/health"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
