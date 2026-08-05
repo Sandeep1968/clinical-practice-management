@@ -1,0 +1,49 @@
+# Render Blueprint — public DEMO with seeded fake data.
+# Free tier: no credit card, 512 MB web service, 1 GB Postgres that never expires.
+# The service sleeps after ~15 min idle and cold-starts in 30–60 s.
+#
+# Do NOT put real patient data here: no BAA, no encryption at rest.
+# See PRODUCTION_READINESS.md.
+
+services:
+  - type: web
+    name: clinicos-demo
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: oregon
+    healthCheckPath: /health
+    # Free plan has no pre-deploy hook, so migrations run at boot.
+    # Safe here because the free tier runs a single instance (no replica race).
+    dockerCommand: sh -c "npm run migrate && npm run seed && npm start"
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: SERVE_STATIC
+        value: "true"
+      - key: DEMO_MODE
+        value: "true"
+      - key: TRUST_PROXY
+        value: "true"
+      - key: PORT
+        value: "4000"
+      - key: DATABASE_SSL
+        value: "true"
+      - key: DATABASE_SSL_INSECURE
+        value: "true"          # Render Postgres presents a self-signed cert
+      - key: JWT_SECRET
+        generateValue: true     # Render generates and stores a strong secret
+      - key: DATABASE_URL
+        fromDatabase:
+          name: clinicos-db
+          property: connectionString
+      - key: MIGRATE_DATABASE_URL
+        fromDatabase:
+          name: clinicos-db
+          property: connectionString
+
+databases:
+  - name: clinicos-db
+    plan: free
+    region: oregon
+    databaseName: cpm

@@ -1,4 +1,49 @@
-# Deploying the demo to Fly.io
+# Deploying the demo
+
+**Recommended: Render** — genuinely free, no credit card, and 1 GB Postgres that
+never expires. Fly.io now requires payment; its config is kept below as an option.
+
+---
+
+# Option A — Render (free, no card)
+
+Publishes a public demo with seeded fake data at `https://clinicos-demo.onrender.com`.
+
+> **No real patient data.** No BAA, no encryption at rest. A demo tenant holding
+> real records without a BAA is already a HIPAA violation. See `PRODUCTION_READINESS.md`.
+
+## Deploy
+
+1. Push this repo to GitHub (already done).
+2. Go to **https://dashboard.render.com/blueprints** → **New Blueprint Instance**.
+3. Connect your GitHub account and pick `clinical-practice-management`.
+4. Render reads `render.yaml`, shows the web service + Postgres, and asks you to
+   confirm. Click **Apply**.
+
+That's it — no CLI, no card. First build takes 3–5 minutes. Render generates
+`JWT_SECRET` automatically and wires `DATABASE_URL` from the database.
+
+## If the build fails on `CREATE ROLE app_user`
+
+Render's database user may lack `CREATEROLE`. The migration will say so explicitly.
+Open the database in Render → **Connect** → **PSQL Command**, run it, then paste:
+
+```
+CREATE ROLE app_user LOGIN PASSWORD 'pick-a-strong-password';
+```
+
+Then hit **Manual Deploy** on the web service. (Migration 016 FORCEs row-level
+security, so isolation holds whichever role the app ends up connecting as.)
+
+## Free-tier behaviour
+
+The service sleeps after ~15 minutes idle and cold-starts in 30–60 seconds — the
+first request after a quiet period is slow, then it's normal. 750 hours/month
+covers one always-available service.
+
+---
+
+# Option B — Fly.io (now requires payment)
 
 Publishes a **public demo with seeded fake data** at `https://clinicos-demo.fly.dev`.
 Landing page, staff app, patient portal and platform console all served from one

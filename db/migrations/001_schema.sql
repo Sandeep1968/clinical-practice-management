@@ -4,9 +4,16 @@
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- ---------- application role (API connects as this; RLS applies) ----------
+-- The app deliberately connects as a NON-OWNER role, because a table owner
+-- bypasses RLS by default. Migration 016 additionally FORCEs RLS as a backstop.
 DO $$ BEGIN
   IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'app_user') THEN
-    CREATE ROLE app_user LOGIN PASSWORD 'app_pass';
+    BEGIN
+      CREATE ROLE app_user LOGIN PASSWORD 'app_pass';
+    EXCEPTION WHEN insufficient_privilege THEN
+      RAISE EXCEPTION
+        'Cannot create the app_user role (no CREATEROLE privilege). Run this once as an admin, then re-deploy:  CREATE ROLE app_user LOGIN PASSWORD ''<strong-password>'';';
+    END;
   END IF;
 END $$;
 
