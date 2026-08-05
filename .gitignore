@@ -1,6 +1,24 @@
 node_modules/
 dist/
 .env
+.env.*
+!.env.example
 *.log
 .DS_Store
 pgdata/
+
+# vite temp files
+*.timestamp-*.mjs
+vite.config.js.timestamp-*
+
+# editor / os
+.vscode/
+.idea/
+*.swp
+
+# never commit real credentials or PHI exports
+*.pem
+*.key
+*.p12
+secrets/
+exports/
